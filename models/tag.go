@@ -4,6 +4,8 @@ import (
 	"cmp"
 	"slices"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/r3dpixel/toolkit/gjsonx"
 	"github.com/r3dpixel/toolkit/stringsx"
@@ -55,6 +57,31 @@ func TagsFromMap(tags map[Slug]string) []Tag {
 	return result
 }
 
+// TagsFromJsonArray - given an array GJson result, return a list of tags, extracted from the array
+func TagsFromJsonArray(array gjson.Result, extractor func(gjson.Result) string) []Tag {
+	tags := gjsonx.ArrayToSlice(
+		array,
+		func(tag Tag) bool {
+			return stringsx.IsNotBlank(tag.Slug)
+		},
+		func(result gjson.Result) Tag {
+			stringTag := extractor(result)
+			slug := SanitizeSlug(stringTag)
+			return Tag{
+				Slug: slug,
+				Name: SanitizeName(stringTag),
+			}
+		},
+	)
+
+	slices.SortFunc(tags, func(a, b Tag) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
+
+	// Return the slice of tags extracted
+	return tags
+}
+
 // MergeTags - given a list of db tags and a list of string tags merge the two lists and return the results
 func MergeTags(tags []Tag, stringTags []string) ([]Tag, []string) {
 	capacity := len(tags) + len(stringTags)
@@ -95,50 +122,74 @@ func SanitizeSlug(slug Slug) Slug {
 }
 
 // SanitizeName - Sanitizes the given tag to be used as a name (removes non-ASCII, trims trailing spaces, and titles)
+
+var capitalizeAfterSet = initCapitalizeAfterSet()
+
 func SanitizeName(name string) string {
-	// Remove non-ASCII
-	sanitizedTagName := strings.TrimSpace(stringsx.Remove(name, symbols.NonAsciiSymbolsRegExp))
-
-	// Mark symbols with spaces so that the title works properly
-	for _, symbol := range symbols.CapitalizeAfter {
-		marker := symbols.Space + symbol + symbols.Space
-		sanitizedTagName = strings.ReplaceAll(sanitizedTagName, symbol, marker)
+	name = strings.TrimSpace(name)
+	if name == stringsx.Empty {
+		return name
 	}
 
-	// Return the given name as title
-	sanitizedTagName = stringsx.ToTitle(sanitizedTagName)
+	var result strings.Builder
+	result.Grow(len(name))
 
-	// Revert marks
-	for _, symbol := range symbols.CapitalizeAfter {
-		marker := symbols.Space + symbol + symbols.Space
-		sanitizedTagName = strings.ReplaceAll(sanitizedTagName, marker, symbol)
+	capitalizeNext := true
+	for i := 0; i < len(name); i++ {
+		b := name[i]
+		if b >= utf8.RuneSelf {
+			return processUnicodeRemainder(name[i:], capitalizeNext, &result)
+		}
+
+		if isASCIILetter(b) && capitalizeNext {
+			capitalizeNext = false
+			b = toASCIIUpper(b)
+		}
+		if stringsx.IsAsciiSpace(b) || capitalizeAfterSet[b] == 1 {
+			capitalizeNext = true
+		}
+
+		result.WriteByte(b)
 	}
 
-	// Return sanitized name
-	return sanitizedTagName
+	return result.String()
 }
 
-// TagsFromJsonArray - given an array GJson result, return a list of tags, extracted from the array
-func TagsFromJsonArray(array gjson.Result, extractor func(gjson.Result) string) []Tag {
-	tags := gjsonx.ArrayToSlice(
-		array,
-		func(tag Tag) bool {
-			return stringsx.IsNotBlank(tag.Slug)
-		},
-		func(result gjson.Result) Tag {
-			stringTag := extractor(result)
-			slug := SanitizeSlug(stringTag)
-			return Tag{
-				Slug: slug,
-				Name: SanitizeName(stringTag),
-			}
-		},
-	)
+func processUnicodeRemainder(input string, capitalizeNext bool, result *strings.Builder) string {
+	for _, r := range input {
+		isLetter := unicode.IsLetter(r)
+		if r >= utf8.RuneSelf && !isLetter && !unicode.IsNumber(r) {
+			continue
+		}
 
-	slices.SortFunc(tags, func(a, b Tag) int {
-		return cmp.Compare(a.Name, b.Name)
-	})
+		if isLetter && capitalizeNext {
+			capitalizeNext = false
+			r = unicode.ToUpper(r)
+		}
+		if unicode.IsSpace(r) || (r < utf8.RuneSelf && capitalizeAfterSet[uint8(r)] == 1) {
+			capitalizeNext = true
+		}
+		result.WriteRune(r)
+	}
 
-	// Return the slice of tags extracted
-	return tags
+	return result.String()
+}
+
+func isASCIILetter(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
+}
+
+func toASCIIUpper(b byte) byte {
+	if b >= 'a' && b <= 'z' {
+		return b - 32
+	}
+	return b
+}
+
+func initCapitalizeAfterSet() [256]uint8 {
+	var symbolSet [256]uint8
+	for _, symbol := range symbols.CapitalizeAfter {
+		symbolSet[symbol[0]] = 1
+	}
+	return symbolSet
 }

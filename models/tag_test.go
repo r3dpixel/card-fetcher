@@ -40,6 +40,9 @@ func TestSanitizeName(t *testing.T) {
 		expected string
 	}{
 		{"Empty string", "", ""},
+		{"First letter capitalized", "Db One", "Db One"},
+		{"Second letter capitalized", "DB One", "DB One"},
+		{"All capitalized", "RPG", "RPG"},
 		{"Simple lowercase", "tag", "Tag"},
 		{"Already titled", "Tag Name", "Tag Name"},
 		{"With extra spaces", "  my tag  ", "My Tag"},
@@ -155,7 +158,7 @@ func TestMergeTags(t *testing.T) {
 		},
 		{
 			name:               "No overlap",
-			dbTags:             []Tag{{Slug: "db1", Name: "DB One"}},
+			dbTags:             []Tag{{Slug: "db1", Name: "Db One"}},
 			stringTags:         []string{"string1"},
 			expectedMergedTags: []Tag{{Slug: "db1", Name: "Db One"}, {Slug: "string1", Name: "String1"}},
 			expectedStringTags: []string{"Db One", "String1"},
