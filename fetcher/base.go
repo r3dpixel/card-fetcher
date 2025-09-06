@@ -3,11 +3,11 @@ package fetcher
 import (
 	"strings"
 
+	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/timestamp"
 	"github.com/r3dpixel/toolkit/trace"
-	"github.com/imroc/req/v3"
 	"github.com/rs/zerolog/log"
 )
 
