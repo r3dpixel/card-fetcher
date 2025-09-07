@@ -6,8 +6,8 @@ require (
 	github.com/elliotchance/orderedmap/v3 v3.1.0
 	github.com/google/go-cmp v0.7.0
 	github.com/imroc/req/v3 v3.54.2
-	github.com/r3dpixel/card-parser v0.6.9
-	github.com/r3dpixel/toolkit v0.6.9
+	github.com/r3dpixel/card-parser v0.6.10
+	github.com/r3dpixel/toolkit v0.6.10
 	github.com/rs/zerolog v1.34.0
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
@@ -50,8 +50,8 @@ require (
 	golang.org/x/image v0.30.0 // indirect
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
