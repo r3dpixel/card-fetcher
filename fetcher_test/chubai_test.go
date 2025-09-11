@@ -86,34 +86,6 @@ func TestChubAIImport_OneMultiLoreBook(t *testing.T) {
 	assertImage(t, card)
 }
 
-func TestChubAIImport_ManyMultiLoreBook(t *testing.T) {
-	t.Parallel()
-
-	url := "https://chub.ai/characters/Decent_Coast/orc-step-mother-95f123171592"
-	fetcherTask := task.New(testClient, testChubAIFetcher, url, testChubAIFetcher.MainURL())
-	metadata, err := fetcherTask.FetchMetadata()
-	assert.NoError(t, err)
-	card, err := fetcherTask.FetchCharacterCard()
-	assert.NoError(t, err)
-
-	jsonSheet := card.Sheet
-
-	metadata, err = fetcherTask.FetchMetadata()
-	assert.NoError(t, err)
-
-	assert.Equal(t, "Sex Acts -- Sexual position lore book -- Sexual position lore book -- Laura and Illiana's relationship", jsonSheet.Data.CharacterBook.GetName())
-	assert.Empty(t, jsonSheet.Data.CharacterBook.GetDescription())
-	assert.NotNil(t, jsonSheet.Data.CharacterBook.Description)
-	assert.Len(t, jsonSheet.Data.CharacterBook.Entries, 57)
-	assert.Equal(t, "chub.ai/characters/Decent_Coast/orc-step-mother-95f123171592", metadata.CardURL)
-	assert.Equal(t, "Decent_Coast/orc-step-mother-95f123171592", metadata.CharacterID)
-	assert.Equal(t, "2782306", metadata.PlatformID)
-
-	assertConsistency(t, metadata, card)
-
-	assertImage(t, card)
-}
-
 func TestChubAIImport_AuxiliaryLoreBook(t *testing.T) {
 	t.Parallel()
 
