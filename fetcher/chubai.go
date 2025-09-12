@@ -256,7 +256,7 @@ func (s *chubAIFetcher) retrieveAuxBooks(
 ) ([]gjson.Result, timestamp.Nano) {
 	var auxBookResponses []gjson.Result
 	maxBookUpdateTime := timestamp.Nano(0)
-	auxSources := metadataResponse.Get("node.description").String() + metadataResponse.Get("node.tagline").String()
+	auxSources := metadataResponse.Get("node.description").String() + symbols.Space + metadataResponse.Get("node.tagline").String()
 	bookURLs := bookRegexp.FindAllStringSubmatch(auxSources, -1)
 	for _, bookURLMatches := range bookURLs {
 		if len(bookURLMatches) <= 1 {
