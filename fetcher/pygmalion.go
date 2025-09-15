@@ -29,7 +29,7 @@ const (
 	pygmalionOrigin  = "https://pygmalion.chat"  // Header for Pygmalion requests
 	pygmalionReferer = "https://pygmalion.chat/" // Header for Pygmalion requests
 
-	pygmalionURL           = "pygmalion.chat"
+	pygmalionSourceURL     = "pygmalion.chat"
 	pygmalionBaseURL       = "pygmalion.chat/character/"                                                           // Main CardURL for Pygmalion
 	pygmalionApiURL        = "https://server.pygmalion.chat/galatea.v1.PublicCharacterService/Character"           // API CardURL for Pygmalion
 	pygmalionAuthURL       = "https://auth.pygmalion.chat/session"                                                 // Authentication CardURL for Pygmalion
@@ -45,7 +45,7 @@ type pygmalionFetcher struct {
 }
 
 // NewPygmalionFetcher - Create a new ChubAI source
-func NewPygmalionFetcher(identityReader cred.IdentityReader) Fetcher {
+func NewPygmalionFetcher(client *req.Client, identityReader cred.IdentityReader) Fetcher {
 	impl := &pygmalionFetcher{
 		identityReader: identityReader,
 		headers: map[string]string{
@@ -54,25 +54,26 @@ func NewPygmalionFetcher(identityReader cred.IdentityReader) Fetcher {
 			"Host":    pygmalionHost,
 		},
 		BaseFetcher: BaseFetcher{
+			client:    client,
 			sourceID:  source.Pygmalion,
-			sourceURL: pygmalionURL,
+			sourceURL: pygmalionSourceURL,
 			directURL: pygmalionBaseURL,
+			mainURL:   pygmalionBaseURL,
 			baseURLs:  []string{pygmalionBaseURL},
 		},
 	}
 	impl.authManager = reqx.NewAuthManager(impl.refreshBearerToken)
-	impl.Extends(impl)
 	return impl
 }
 
 // FetchMetadata - Retrieve metadata for given url
-func (s *pygmalionFetcher) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
+func (s *pygmalionFetcher) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
 	// Send POST request for metadata (check if response is valid JSON, log error)
 	metadataRequestBody := map[string]string{
 		"characterMetaId": characterID,
 	}
 	requestBodyBytes, _ := json.Marshal(metadataRequestBody)
-	jsonResponse, err := c.R().
+	jsonResponse, err := s.client.R().
 		SetContentType(reqx.JsonApplicationContentType).
 		SetBody(requestBodyBytes).
 		Post(pygmalionApiURL)
@@ -99,7 +100,7 @@ func (s *pygmalionFetcher) FetchMetadata(c *req.Client, normalizedURL string, ch
 	updateTime := timestamp.Convert[timestamp.Nano](timestamp.Seconds(metadataResponse.Get("character.updatedAt").Int()))
 	createTime := timestamp.Convert[timestamp.Nano](timestamp.Seconds(metadataResponse.Get("character.createdAt").Int()))
 
-	bookResponse := s.retrieveBookData(c, characterID)
+	bookResponse := s.retrieveBookData(characterID)
 	bookUpdateTime := timestamp.Nano(0)
 	bookResponse.Get("lorebooks.#.updatedAt").ForEach(func(key, value gjson.Result) bool {
 		bookUpdateTime = max(bookUpdateTime, timestamp.Convert[timestamp.Nano](timestamp.Seconds(value.Int())))
@@ -130,9 +131,9 @@ func (s *pygmalionFetcher) FetchMetadata(c *req.Client, normalizedURL string, ch
 }
 
 // FetchPngCard - Retrieve card for given url
-func (s *pygmalionFetcher) FetchCharacterCard(c *req.Client, metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (s *pygmalionFetcher) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
 	metadataResponse := response.Metadata
-	characterCard, err := s.retrieveCardData(c, metadata, metadataResponse)
+	characterCard, err := s.retrieveCardData(metadata, metadataResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -144,10 +145,10 @@ func (s *pygmalionFetcher) FetchCharacterCard(c *req.Client, metadata *models.Me
 	return characterCard, nil
 }
 
-func (s *pygmalionFetcher) retrieveCardData(c *req.Client, metadata *models.Metadata, gJsonResponse gjson.Result) (*png.CharacterCard, error) {
+func (s *pygmalionFetcher) retrieveCardData(metadata *models.Metadata, gJsonResponse gjson.Result) (*png.CharacterCard, error) {
 	// Download avatar and transform to PNG
 	avatarUrl := gJsonResponse.Get("character.avatarUrl").String()
-	rawCard, err := png.FromURL(c, avatarUrl).DeepScan().Get()
+	rawCard, err := png.FromURL(s.client, avatarUrl).DeepScan().Get()
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +159,7 @@ func (s *pygmalionFetcher) retrieveCardData(c *req.Client, metadata *models.Meta
 
 	// TaskOf the characterCard card (from Pygmalion export)
 	exportUrl := fmt.Sprintf(pygmalionCardExportURL, metadata.CharacterID)
-	response, err := c.R().
+	response, err := s.client.R().
 		SetContentType(reqx.JsonApplicationContentType).
 		Get(exportUrl)
 	// Check if the response is a valid JSON (error is treated upstream)
@@ -245,7 +246,7 @@ func (s *pygmalionFetcher) getMergedBook(response models.JsonResponse) *characte
 	return bookMerger.Build()
 }
 
-func (s *pygmalionFetcher) retrieveBookData(c *req.Client, characterID string) gjson.Result {
+func (s *pygmalionFetcher) retrieveBookData(characterID string) gjson.Result {
 	// Send GET request for the book (check if response is valid JSON, log error)
 	bookRequestBody := map[string]string{
 		"characterId": characterID,
@@ -253,7 +254,7 @@ func (s *pygmalionFetcher) retrieveBookData(c *req.Client, characterID string) g
 	requestBodyBytes, _ := json.Marshal(bookRequestBody)
 	// Send the POST request for the metadata
 	// Retrieve bearer token
-	response, err := s.authManager.Do(c, func(c *req.Client, token string) (*req.Response, error) {
+	response, err := s.authManager.Do(s.client, func(c *req.Client, token string) (*req.Response, error) {
 		return c.R().
 			SetBearerAuthToken(token).
 			SetContentType(reqx.JsonApplicationContentType).

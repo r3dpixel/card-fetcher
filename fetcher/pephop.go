@@ -18,7 +18,7 @@ import (
 const (
 	pephopUuidLength int = 36 // PepHop Slug length
 
-	pephopURL       string = "pephop.ai"
+	pephopSourceURL string = "pephop.ai"
 	pephopBaseURL   string = "pephop.ai/characters/"                                          // Main CardURL for PepHop
 	pephopApiURL    string = "https://api.eosai.chat/characters/%s"                           // API CardURL for PepHop
 	pephopAvatarURL string = "https://sp.eosai.chat//storage/v1/object/public/bot-avatars/%s" // Avatar Download CardURL for PepHop
@@ -33,26 +33,27 @@ type pephopFetcher struct {
 }
 
 // NewPephopFetcher - Create a new ChubAI source
-func NewPephopFetcher() Fetcher {
+func NewPephopFetcher(client *req.Client) Fetcher {
 	impl := &pephopFetcher{
 		BaseFetcher: BaseFetcher{
+			client:    client,
 			sourceID:  source.PepHop,
-			sourceURL: pephopURL,
+			sourceURL: pephopSourceURL,
 			directURL: pephopBaseURL,
+			mainURL:   pephopBaseURL,
 			baseURLs:  []string{pephopBaseURL},
 		},
 	}
-	impl.Extends(impl)
 	return impl
 }
 
 // FetchMetadata - Retrieve metadata for given url
-func (s *pephopFetcher) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
+func (s *pephopFetcher) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
 	// Create the API url for retrieving the metadata
 	metadataURL := fmt.Sprintf(pephopApiURL, characterID)
 
 	// Retrieve the metadata (log error is response is invalid)
-	response, err := c.R().Get(metadataURL)
+	response, err := s.client.R().Get(metadataURL)
 	// Check if the response is a valid JSON
 	if !reqx.IsResponseOk(response, err) {
 		return nil, models.EmptyJsonResponse, s.fetchMetadataErr(normalizedURL, err)
@@ -100,11 +101,11 @@ func (s *pephopFetcher) FetchMetadata(c *req.Client, normalizedURL string, chara
 }
 
 // FetchPngCard - Retrieve card for given url
-func (s *pephopFetcher) FetchCharacterCard(c *req.Client, metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (s *pephopFetcher) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
 	metadataResponse := response.Metadata
 	// Download avatar and transform to PNG
 	pepHopAvatarURL := fmt.Sprintf(pephopAvatarURL, metadataResponse.Get("avatar").String())
-	rawCard, err := png.FromURL(c, pepHopAvatarURL).DeepScan().Get()
+	rawCard, err := png.FromURL(s.client, pepHopAvatarURL).DeepScan().Get()
 	if err != nil {
 		return nil, err
 	}

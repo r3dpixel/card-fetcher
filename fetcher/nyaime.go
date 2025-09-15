@@ -23,7 +23,7 @@ const (
 	nyaiMeOrigin  string = "https://nyai.me"  // Header for NyaiMe download request
 
 	nyaiStartingRune rune   = 'a' // Starting rune for NyaiMe identifier conversion to PostID (base26 conversion)
-	nyaiMeURL        string = "nyai.me"
+	nyaiMeSourceURL  string = "nyai.me"
 	nyaiMeBaseURL    string = "nyai.me/ai/bots/"     // Main CardURL for NyaiMe
 	nyaiMeApiURL     string = "https://api.nyai.me/" // API CardURL for NyaiMe
 
@@ -38,12 +38,14 @@ type nyaiMeFetcher struct {
 }
 
 // NewNyaiMeFetcher - Create a new NyaiMe source
-func NewNyaiMeFetcher() Fetcher {
+func NewNyaiMeFetcher(client *req.Client) Fetcher {
 	impl := &nyaiMeFetcher{
 		BaseFetcher: BaseFetcher{
+			client:    client,
 			sourceID:  source.NyaiMe,
-			sourceURL: nyaiMeURL,
+			sourceURL: nyaiMeSourceURL,
 			directURL: nyaiMeBaseURL,
+			mainURL:   nyaiMeBaseURL,
 			baseURLs:  []string{nyaiMeBaseURL},
 		},
 		headers: map[string]string{
@@ -53,19 +55,18 @@ func NewNyaiMeFetcher() Fetcher {
 			"IsGuest":     "1",
 		},
 	}
-	impl.Extends(impl)
 	return impl
 }
 
 // FetchMetadata - Retrieve metadata for given url
-func (s *nyaiMeFetcher) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
+func (s *nyaiMeFetcher) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
 	// Retrieve NyaiMe identifier
 	identifier := s.getIdentifier(characterID)
 	// Compute PostID (base26 conversion of the identifier)
 	postID := s.getPostID(identifier)
 
 	// Retrieve the metadata (log error is response is invalid)
-	jsonResponse, err := c.R().
+	jsonResponse, err := s.client.R().
 		SetHeaders(s.headers).
 		SetBodyString(s.downloadRequestBody(postID)).
 		Post(nyaiMeApiURL)
@@ -118,13 +119,13 @@ func (s *nyaiMeFetcher) FetchMetadata(c *req.Client, normalizedURL string, chara
 }
 
 // FetchPngCard - Retrieve card for given url
-func (s *nyaiMeFetcher) FetchCharacterCard(c *req.Client, metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (s *nyaiMeFetcher) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
 	metadataResponse := response.Metadata
 
 	// Retrieve png sheet CardURL
 	nyaiMeCardURL := metadataResponse.Get("Post.ImageURL").String()
 	// Download PNG sheet
-	rawCard, err := png.FromURL(c, nyaiMeCardURL).DeepScan().Get()
+	rawCard, err := png.FromURL(s.client, nyaiMeCardURL).DeepScan().Get()
 	// If the characterCard or the sheet is nil, then the export failed
 	if err != nil {
 		return nil, err

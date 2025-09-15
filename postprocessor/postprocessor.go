@@ -3,7 +3,6 @@ package postprocessor
 import (
 	"strings"
 
-	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-parser/character"
@@ -20,13 +19,12 @@ type postProcessor struct {
 // New - creates a new post processor based on an existing source
 func New(fetcher fetcher.Fetcher) fetcher.Fetcher {
 	p := &postProcessor{Fetcher: fetcher}
-	p.Extends(p)
 	return p
 }
 
 // FetchMetadata - Retrieve metadata for given url using the underlying source (and applies post-processing)
-func (processor *postProcessor) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
-	metadata, gJsonResponse, err := processor.Fetcher.FetchMetadata(c, normalizedURL, characterID)
+func (processor *postProcessor) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
+	metadata, gJsonResponse, err := processor.Fetcher.FetchMetadata(normalizedURL, characterID)
 	if err != nil {
 		return nil, models.EmptyJsonResponse, err
 	}
@@ -35,8 +33,8 @@ func (processor *postProcessor) FetchMetadata(c *req.Client, normalizedURL strin
 }
 
 // FetchPngCard - Retrieve card for given url using the underlying source (and applies post-processing)
-func (processor *postProcessor) FetchCharacterCard(c *req.Client, metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
-	characterCard, err := processor.Fetcher.FetchCharacterCard(c, metadata, response)
+func (processor *postProcessor) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+	characterCard, err := processor.Fetcher.FetchCharacterCard(metadata, response)
 	if err != nil {
 		return characterCard, err
 	}

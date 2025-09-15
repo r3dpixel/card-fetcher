@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	chubURL                string = "chub.ai"
+	chubSourceURL          string = "chub.ai"
 	chubMainURL            string = "chub.ai/characters/"                                     // Main CardURL for ChubAI
 	chubAlternateURL       string = "characterhub.org/characters/"                            // Mirror CardURL for ChubAI
 	chubApiURL             string = "https://api.chub.ai/api/characters/%s?full=true"         // Public API for retrieving metadata
@@ -50,26 +50,27 @@ type chubAIFetcher struct {
 }
 
 // NewChubAIFetcher - Create a new ChubAI source
-func NewChubAIFetcher() Fetcher {
+func NewChubAIFetcher(client *req.Client) Fetcher {
 	impl := &chubAIFetcher{
 		BaseFetcher: BaseFetcher{
+			client:    client,
 			sourceID:  source.ChubAI,
-			sourceURL: chubURL,
+			sourceURL: chubSourceURL,
 			directURL: chubMainURL,
+			mainURL:   chubMainURL,
 			baseURLs:  []string{chubMainURL, chubAlternateURL},
 		},
 	}
-	impl.Extends(impl)
 	return impl
 }
 
 // FetchMetadata - Retrieve metadata for given url
-func (s *chubAIFetcher) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
+func (s *chubAIFetcher) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
 	// Create the API url for retrieving the metadata
 	metadataURL := fmt.Sprintf(chubApiURL, characterID)
 
 	// Retrieve the metadata (log error is response is invalid)
-	response, err := c.R().Get(metadataURL)
+	response, err := s.client.R().Get(metadataURL)
 	// Check if the response is a valid JSON
 	if !reqx.IsResponseOk(response, err) {
 		return nil, models.EmptyJsonResponse, s.fetchMetadataErr(normalizedURL, err)
@@ -108,8 +109,8 @@ func (s *chubAIFetcher) FetchMetadata(c *req.Client, normalizedURL string, chara
 		gjsonx.Stringifier,
 	)
 
-	linkedBookResponses, linkedBookUpdateTime := s.retrieveLinkedBooks(c, metadataURL, bookIDs)
-	auxBookResponses, auxBookUpdateTime := s.retrieveAuxBooks(c, metadataURL, metadataResponse, bookIDs)
+	linkedBookResponses, linkedBookUpdateTime := s.retrieveLinkedBooks(metadataURL, bookIDs)
+	auxBookResponses, auxBookUpdateTime := s.retrieveAuxBooks(metadataURL, metadataResponse, bookIDs)
 
 	metadata := &models.Metadata{
 		Source:         s.sourceID,
@@ -134,12 +135,12 @@ func (s *chubAIFetcher) FetchMetadata(c *req.Client, normalizedURL string, chara
 }
 
 // FetchPngCard - Retrieve card for given url
-func (s *chubAIFetcher) FetchCharacterCard(c *req.Client, metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (s *chubAIFetcher) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
 	metadataResponse := response.Metadata
 	chubCardURL := metadataResponse.Get("node.max_res_url").String()
 	backupURL := metadataResponse.Get("node.avatar_url").String()
 
-	characterCard, err := s.retrieveCardData(c, chubCardURL, backupURL)
+	characterCard, err := s.retrieveCardData(chubCardURL, backupURL)
 	if err != nil {
 		return nil, err
 	}
@@ -219,13 +220,13 @@ func (s *chubAIFetcher) updateFieldsWithFallback(data *character.Data, metadataR
 	}
 }
 
-func (s *chubAIFetcher) retrieveCardData(c *req.Client, cardURL string, backupURL string) (*png.CharacterCard, error) {
-	rawCard, err := png.FromURL(c, cardURL).DeepScan().Get()
+func (s *chubAIFetcher) retrieveCardData(cardURL string, backupURL string) (*png.CharacterCard, error) {
+	rawCard, err := png.FromURL(s.client, cardURL).DeepScan().Get()
 	if err != nil {
-		rawCard, err = png.FromURL(c, s.fixAvatarURL(cardURL)).DeepScan().Get()
+		rawCard, err = png.FromURL(s.client, s.fixAvatarURL(cardURL)).DeepScan().Get()
 	}
 	if err != nil {
-		rawCard, err = png.FromURL(c, backupURL).DeepScan().Get()
+		rawCard, err = png.FromURL(s.client, backupURL).DeepScan().Get()
 	}
 	if err != nil {
 		return nil, err
@@ -234,11 +235,11 @@ func (s *chubAIFetcher) retrieveCardData(c *req.Client, cardURL string, backupUR
 	return rawCard.Decode()
 }
 
-func (s *chubAIFetcher) retrieveLinkedBooks(c *req.Client, metadataURL string, bookIDs *orderedmap.OrderedMap[string, struct{}]) ([]gjson.Result, timestamp.Nano) {
+func (s *chubAIFetcher) retrieveLinkedBooks(metadataURL string, bookIDs *orderedmap.OrderedMap[string, struct{}]) ([]gjson.Result, timestamp.Nano) {
 	var bookResponses []gjson.Result
 	maxBookUpdateTime := timestamp.Nano(0)
 	for bookID := range bookIDs.Keys() {
-		bookGJson, bookUpdateTime, found := s.retrieveBookData(c, bookID, metadataURL)
+		bookGJson, bookUpdateTime, found := s.retrieveBookData(bookID, metadataURL)
 		if found {
 			bookResponses = append(bookResponses, bookGJson)
 			maxBookUpdateTime = max(maxBookUpdateTime, bookUpdateTime)
@@ -249,7 +250,6 @@ func (s *chubAIFetcher) retrieveLinkedBooks(c *req.Client, metadataURL string, b
 }
 
 func (s *chubAIFetcher) retrieveAuxBooks(
-	c *req.Client,
 	metadataURL string,
 	metadataResponse gjson.Result,
 	bookIDs *orderedmap.OrderedMap[string, struct{}],
@@ -264,7 +264,7 @@ func (s *chubAIFetcher) retrieveAuxBooks(
 		}
 		bookPath := bookURLMatches[1]
 		for len(bookPath) > 0 {
-			bookGJson, bookUpdateTime, found := s.retrieveBookData(c, bookPath, metadataURL)
+			bookGJson, bookUpdateTime, found := s.retrieveBookData(bookPath, metadataURL)
 			if found {
 				bookID := strings.TrimSpace(bookGJson.Get("node.id").String())
 				if !bookIDs.Has(bookID) {
@@ -284,9 +284,9 @@ func (s *chubAIFetcher) retrieveAuxBooks(
 	return auxBookResponses, maxBookUpdateTime
 }
 
-func (s *chubAIFetcher) retrieveBookData(c *req.Client, bookID string, url string) (gjson.Result, timestamp.Nano, bool) {
+func (s *chubAIFetcher) retrieveBookData(bookID string, url string) (gjson.Result, timestamp.Nano, bool) {
 	// Retrieve the book data
-	response, err := c.R().
+	response, err := s.client.R().
 		SetContentType(reqx.JsonApplicationContentType).
 		Get(fmt.Sprintf(chubApiBookURL, bookID))
 	if !reqx.IsResponseOk(response, err) {

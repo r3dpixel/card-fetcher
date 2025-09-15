@@ -15,10 +15,11 @@ const ()
 
 // BaseFetcher - Embeddable struct for creating a new source
 type BaseFetcher struct {
-	Fetcher
+	client    *req.Client
 	sourceID  source.ID
 	sourceURL string
 	directURL string
+	mainURL   string
 	baseURLs  []string
 }
 
@@ -27,7 +28,7 @@ func (s *BaseFetcher) SourceURL() string {
 }
 
 func (s *BaseFetcher) MainURL() string {
-	return s.baseURLs[0]
+	return s.mainURL
 }
 
 func (s *BaseFetcher) BaseURLs() []string {
@@ -39,7 +40,7 @@ func (s *BaseFetcher) SourceID() source.ID {
 }
 
 func (s *BaseFetcher) NormalizeURL(characterID string) string {
-	return s.Fetcher.MainURL() + characterID
+	return s.mainURL + characterID
 }
 
 func (s *BaseFetcher) DirectURL(characterID string) string {
@@ -49,10 +50,6 @@ func (s *BaseFetcher) DirectURL(characterID string) string {
 func (s *BaseFetcher) CharacterID(url string, matchedURL string) string {
 	tokens := strings.Split(url, matchedURL)
 	return tokens[len(tokens)-1]
-}
-
-func (s *BaseFetcher) Extends(f Fetcher) {
-	s.Fetcher = f
 }
 
 func (s *BaseFetcher) fromDate(format string, date string, url string) timestamp.Nano {
@@ -86,7 +83,7 @@ func (s *BaseFetcher) missingPlatformIdErr(url string, cause error) error {
 		Msg("Missing platform ID")
 }
 
-func (s *BaseFetcher) IsSourceUp(c *req.Client) bool {
-	response, err := c.R().Get("https://" + s.sourceURL)
+func (s *BaseFetcher) IsSourceUp() bool {
+	response, err := s.client.R().Get("https://" + s.sourceURL)
 	return reqx.IsResponseOk(response, err)
 }

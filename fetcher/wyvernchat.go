@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	wyvernURL       string = "app.wyvern.chat"
+	wyvernSourceURL string = "app.wyvern.chat"
 	wyvernDirectURL string = "app.wyvern.chat/characters/"
 
 	wyvernMainURL string = "wyvern.chat/characters/"               // Main CardURL for WyvernChat
@@ -40,27 +40,28 @@ type wyvernChatFetcher struct {
 }
 
 // NewWyvernChatFetcher - Create a new WyvernChat source
-func NewWyvernChatFetcher() Fetcher {
+func NewWyvernChatFetcher(client *req.Client) Fetcher {
 	impl := &wyvernChatFetcher{
 		BaseFetcher: BaseFetcher{
+			client:    client,
 			sourceID:  source.WyvernChat,
-			sourceURL: wyvernURL,
+			sourceURL: wyvernSourceURL,
 			directURL: wyvernDirectURL,
+			mainURL:   wyvernMainURL,
 			baseURLs:  []string{wyvernMainURL},
 		},
 	}
 
-	impl.Extends(impl)
 	return impl
 }
 
 // FetchMetadata - Retrieve metadata for given url
-func (s *wyvernChatFetcher) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
+func (s *wyvernChatFetcher) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
 	// Create the API url for the card
 	metadataUrl := fmt.Sprintf(wyvernApiURL, characterID)
 
 	// Retrieve the metadata (log error is response is invalid)
-	response, err := c.R().Get(metadataUrl)
+	response, err := s.client.R().Get(metadataUrl)
 	// Check if response is a valid JSON
 	if !reqx.IsResponseOk(response, err) {
 		return nil, models.EmptyJsonResponse, s.fetchMetadataErr(normalizedURL, err)
@@ -112,11 +113,11 @@ func (s *wyvernChatFetcher) FetchMetadata(c *req.Client, normalizedURL string, c
 }
 
 // FetchPngCard - Retrieve card for given url
-func (s *wyvernChatFetcher) FetchCharacterCard(c *req.Client, metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (s *wyvernChatFetcher) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
 	metadataResponse := response.Metadata
 	avatarURL := metadataResponse.Get("avatar").String()
 	// Download avatar and transform to PNG
-	rawCard, err := png.FromURL(c, avatarURL).DeepScan().Get()
+	rawCard, err := png.FromURL(s.client, avatarURL).DeepScan().Get()
 	if err != nil {
 		return nil, err
 	}

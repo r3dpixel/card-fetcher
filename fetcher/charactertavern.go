@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/imroc/req/v3"
@@ -15,15 +16,13 @@ import (
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/structx"
-	"github.com/r3dpixel/toolkit/symbols"
-	"github.com/r3dpixel/toolkit/timestamp"
 	"github.com/tidwall/gjson"
 )
 
 const (
-	characterTavernURL        string = "character-tavern.com"
+	characterTavernSourceURL  string = "character-tavern.com"
 	characterTavernBaseURL    string = "character-tavern.com/character/"                                    // Main CardURL for CharacterTavern
-	characterTavernApiURL     string = "https://character-tavern.com/character/%s/__data.json"              // API CardURL for CharacterTavern
+	characterTavernApiURL     string = "https://character-tavern.com/api/character/%s"                      // API CardURL for CharacterTavern
 	characterTavernAvatarURL  string = "https://cards.character-tavern.com/cdn-cgi/image/format=png/%s.png" // Avatar Download CardURL for CharacterTavern
 	characterTavernChunkRegex string = `({[\s\S]*})[\s\S]*{"type":"chunk"[\s\S]*`                           // Regex used to extract the relevant chunk of metadata from the API CardURL json response
 
@@ -37,26 +36,27 @@ type characterTavernFetcher struct {
 }
 
 // NewCharacterTavernFetcher - Create a new CharacterTavern source
-func NewCharacterTavernFetcher() Fetcher {
+func NewCharacterTavernFetcher(client *req.Client) Fetcher {
 	impl := &characterTavernFetcher{
 		BaseFetcher: BaseFetcher{
+			client:    client,
 			sourceID:  source.CharacterTavern,
-			sourceURL: characterTavernURL,
+			sourceURL: characterTavernSourceURL,
 			directURL: characterTavernBaseURL,
+			mainURL:   characterTavernBaseURL,
 			baseURLs:  []string{characterTavernBaseURL},
 		},
 	}
-	impl.Extends(impl)
 	return impl
 }
 
 // FetchMetadata - Retrieve metadata for given url
-func (s *characterTavernFetcher) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
+func (s *characterTavernFetcher) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
 	// Create the API url for the card
 	metadataURL := fmt.Sprintf(characterTavernApiURL, characterID)
 
 	// Retrieve the metadata (log error is response is invalid)
-	response, err := c.R().Get(metadataURL)
+	response, err := s.client.R().Get(metadataURL)
 	// Check if response is a valid JSON
 	if !reqx.IsResponseOk(response, err) {
 		return nil, models.EmptyJsonResponse, s.fetchMetadataErr(normalizedURL, err)
@@ -65,19 +65,19 @@ func (s *characterTavernFetcher) FetchMetadata(c *req.Client, normalizedURL stri
 	metadataResponse := s.getCharacterJsonString(response.String())
 
 	// Retrieve the platform Slug
-	platformID := s.getJsonField("id", metadataResponse).String()
+	platformID := metadataResponse.Get("id").String()
 
 	// Retrieve the real card name
-	cardName := s.getJsonField(character.NameField, metadataResponse).String()
+	cardName := metadataResponse.Get("name").String()
 	// Retrieve the character name
-	name := s.getJsonField("inChatName", metadataResponse).String()
+	name := metadataResponse.Get("inChatName").String()
 	// Retrieve creator
-	creator := s.getJsonFieldFromFirstMap("author", metadataResponse).String()
+	creator := strings.Split(metadataResponse.Get("path").String(), `/`)[0]
 	// Retrieve tagline
-	tagline := s.getJsonField(characterTavernTaglineField, metadataResponse).String()
+	tagline := metadataResponse.Get("tagline").String()
 	// Extract the update time and created time
-	updateTime := s.getJsonDate("lastUpdatedAt", metadataResponse, normalizedURL)
-	createTime := s.getJsonDate("createdAt", metadataResponse, normalizedURL)
+	updateTime := s.fromDate(characterTavernDateFormat, metadataResponse.Get("lastUpdatedAt").String(), normalizedURL)
+	createTime := s.fromDate(characterTavernDateFormat, metadataResponse.Get("createdAt").String(), normalizedURL)
 
 	if stringsx.IsBlank(platformID) {
 		return nil, models.EmptyJsonResponse, s.missingPlatformIdErr(normalizedURL, nil)
@@ -104,9 +104,9 @@ func (s *characterTavernFetcher) FetchMetadata(c *req.Client, normalizedURL stri
 }
 
 // FetchCharacterCard - Retrieve card for given url
-func (s *characterTavernFetcher) FetchCharacterCard(c *req.Client, metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (s *characterTavernFetcher) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
 	// TaskOf the character avatar png and preserve any still existing metadata
-	rawCard, err := png.FromURL(c, fmt.Sprintf(characterTavernAvatarURL, metadata.CharacterID)).DeepScan().Get()
+	rawCard, err := png.FromURL(s.client, fmt.Sprintf(characterTavernAvatarURL, metadata.CharacterID)).DeepScan().Get()
 	if err != nil {
 		return nil, err
 	}
@@ -124,18 +124,18 @@ func (s *characterTavernFetcher) FetchCharacterCard(c *req.Client, metadata *mod
 
 	sheet := characterCard.Sheet
 	// Assign the character description field
-	sheet.Data.Description = s.getJsonField("definition_character_description", metadataResponse).String()
+	stringsx.UpdateIfExists(&sheet.Data.Description, metadataResponse.Get("definition_character_description").String())
 	// Assign the personality field
-	sheet.Data.Personality = s.getJsonField("definition_personality", metadataResponse).String()
+	sheet.Data.Personality = metadataResponse.Get("definition_personality").String()
 	// Assign the character scenario field
-	sheet.Data.Scenario = s.getJsonField("definition_scenario", metadataResponse).String()
+	sheet.Data.Scenario = metadataResponse.Get("definition_scenario").String()
 	// Assign the first message
-	sheet.Data.FirstMessage = s.getJsonField("definition_first_message", metadataResponse).String()
+	sheet.Data.FirstMessage = metadataResponse.Get("definition_first_message").String()
 	// Assign the example dialogs
-	sheet.Data.MessageExamples = s.getJsonField("definition_example_messages", metadataResponse).String()
+	sheet.Data.MessageExamples = metadataResponse.Get("definition_example_messages").String()
 	// Assembled the creator notes from the tagline and introduction
 	// Introduction for CharacterTavern is description
-	introduction := s.getJsonField(character.DescriptionField, metadataResponse).String()
+	introduction := metadataResponse.Get(character.DescriptionField).String()
 	// Assign the assembled creator notes
 	sheet.Data.CreatorNotes = stringsx.JoinNonBlank(
 		character.CreatorNotesSeparator,
@@ -144,12 +144,12 @@ func (s *characterTavernFetcher) FetchCharacterCard(c *req.Client, metadata *mod
 
 	// Assign any existing system prompt only if it is not empty
 	// CharacterTavern does not support system prompt, but if there is one in the png metadata, preserve it
-	systemPrompt := s.getJsonField("definition_system_prompt", metadataResponse).String()
+	systemPrompt := metadataResponse.Get("definition_system_prompt").String()
 	if stringsx.IsNotBlank(systemPrompt) {
 		sheet.Data.SystemPrompt = systemPrompt
 	}
 	// Assign the post history instruction field
-	sheet.Data.PostHistoryInstructions = s.getJsonField("definition_post_history_prompt", metadataResponse).String()
+	sheet.Data.PostHistoryInstructions = metadataResponse.Get("definition_post_history_prompt").String()
 
 	// Assign the greetings
 	greetings := s.getJsonAlternateGreetings(metadataResponse)
@@ -224,21 +224,6 @@ func (s *characterTavernFetcher) getJsonAlternateGreetings(gJsonResponse gjson.R
 	return greetings
 }
 
-// Extract a date in timestamp unix format from the json data
-func (s *characterTavernFetcher) getJsonDate(fieldName string, gJsonResponse gjson.Result, url string) timestamp.Nano {
-	// TaskOf the date field (which is an array holding two elements)
-	dateResult := s.getJsonField(fieldName, gJsonResponse)
-	// Iterate through the elements
-	for _, item := range dateResult.Array() {
-		// If the element is indeed a date string in the RFC3339 format, transform it into a timestamp and return
-		date := item.String()
-		if symbols.RFC3339NanoRegExp.MatchString(date) {
-			return s.fromDate(characterTavernDateFormat, date, url)
-		}
-	}
-	return 0
-}
-
 // TaskOf the raw value of a JSON field
 // CharacterTavern holds a JSON Array of field
 // The first two elements are maps from field name to indices
@@ -251,13 +236,6 @@ func (s *characterTavernFetcher) getJsonField(fieldName string, gJsonResponse gj
 		// Check the first map for any remaining information
 		filedIndex = gJsonResponse.Get(fmt.Sprintf("0.%s", fieldName)).Int()
 	}
-	// Return the real value of the field (element with the index equal to the fieldIndex in the array)
-	return gJsonResponse.Get(fmt.Sprintf("%d", filedIndex))
-}
-
-func (s *characterTavernFetcher) getJsonFieldFromFirstMap(fieldName string, gJsonResponse gjson.Result) gjson.Result {
-	// Check the first map for any information
-	filedIndex := gJsonResponse.Get(fmt.Sprintf("0.%s", fieldName)).Int()
 	// Return the real value of the field (element with the index equal to the fieldIndex in the array)
 	return gJsonResponse.Get(fmt.Sprintf("%d", filedIndex))
 }

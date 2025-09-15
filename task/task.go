@@ -3,7 +3,6 @@ package task
 import (
 	"sync"
 
-	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/source"
@@ -23,7 +22,6 @@ type task struct {
 	fetchMetadataOnce sync.Once
 	fetchCardOnce     sync.Once
 
-	client        *req.Client
 	fetcher       fetcher.Fetcher
 	originalURL   string
 	normalizedURL string
@@ -36,12 +34,11 @@ type task struct {
 	cardErr     error
 }
 
-func New(client *req.Client, fetcher fetcher.Fetcher, url string, matchedURL string) Task {
+func New(fetcher fetcher.Fetcher, url string, matchedURL string) Task {
 	characterID := fetcher.CharacterID(url, matchedURL)
 	normalizedURL := fetcher.NormalizeURL(characterID)
 	return &task{
 		fetcher:       fetcher,
-		client:        client,
 		originalURL:   url,
 		normalizedURL: normalizedURL,
 		characterID:   characterID,
@@ -62,7 +59,7 @@ func (t *task) NormalizedURL() string {
 
 func (t *task) internalFetchMetadata() {
 	t.fetchMetadataOnce.Do(func() {
-		t.metadata, t.response, t.metadataErr = t.fetcher.FetchMetadata(t.client, t.normalizedURL, t.characterID)
+		t.metadata, t.response, t.metadataErr = t.fetcher.FetchMetadata(t.normalizedURL, t.characterID)
 	})
 }
 
@@ -81,7 +78,7 @@ func (t *task) FetchCharacterCard() (*png.CharacterCard, error) {
 	}
 
 	t.fetchCardOnce.Do(func() {
-		t.card, t.cardErr = t.fetcher.FetchCharacterCard(t.client, t.metadata, t.response)
+		t.card, t.cardErr = t.fetcher.FetchCharacterCard(t.metadata, t.response)
 	})
 
 	return t.card, t.cardErr
