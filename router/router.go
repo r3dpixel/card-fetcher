@@ -27,9 +27,21 @@ const (
 	IntegrationSuccess       IntegrationStatus = "INTEGRATION SUCCESS"
 )
 
+type TaskBucket struct {
+	Tasks       map[string]task.Task
+	ValidURLs   []string
+	InvalidURLs []string
+}
+
+type TaskSlice struct {
+	Tasks       []task.Task
+	ValidURLs   []string
+	InvalidURLs []string
+}
+
 type Options struct {
-	factory.FactoryOptions
-	reqx.ClientOptions
+	FactoryOptions factory.Options
+	ClientOptions  reqx.Options
 }
 
 type Router struct {
@@ -151,7 +163,7 @@ func (r *Router) TaskOf(url string) (task.Task, bool) {
 
 func (r *Router) tryFetcher(fetcher fetcher.Fetcher, url string) (task.Task, bool) {
 	if matchedURL, found := stringsx.ContainsAny(url, fetcher.BaseURLs()...); found {
-		return task.New(r.client, fetcher, url, matchedURL), true
+		return task.New(fetcher, url, matchedURL), true
 	}
 	return nil, false
 }
@@ -162,7 +174,7 @@ func (r *Router) checkIntegration(f fetcher.Fetcher) IntegrationStatus {
 		return MissingLocalResource
 	}
 
-	isSourceUp := f.IsSourceUp(r.client)
+	isSourceUp := f.IsSourceUp()
 	if !isSourceUp {
 		return SourceDown
 	}
@@ -180,20 +192,20 @@ func (r *Router) checkIntegration(f fetcher.Fetcher) IntegrationStatus {
 	if err != nil {
 		return MissingRemoteResource
 	}
-	card, err := fetcherTask.FetchCharacterCard()
+	characterCard, err := fetcherTask.FetchCharacterCard()
 	if err != nil {
 		return MissingRemoteResource
 	}
 
 	metadata, _ = fetcherTask.FetchMetadata()
-	if card.IsMalformed() {
+	if characterCard.IsMalformed() {
 		return IntegrationFailure
 	}
-	if !metadata.IsConsistentWith(card.Sheet) {
+	if !metadata.IsConsistentWith(characterCard.Sheet) {
 		return IntegrationFailure
 	}
 
-	if !cmp.Equal(localCard.Sheet, card.Sheet, cmpopts.EquateEmpty()) {
+	if !cmp.Equal(localCard.Sheet, characterCard.Sheet, cmpopts.EquateEmpty()) {
 		return IntegrationFailure
 	}
 

@@ -13,10 +13,10 @@ import (
 )
 
 func main() {
-	factoryOpts := factory.FactoryOptions{
+	factoryOpts := factory.Options{
 		PygmalionIdentityProvider: cred.NewManager("pygmalion", cred.Env),
 	}
-	clientOpts := reqx.ClientOptions{
+	clientOpts := reqx.Options{
 		RetryCount: 3,
 	}
 

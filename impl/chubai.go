@@ -1,4 +1,4 @@
-package fetcher
+package impl
 
 import (
 	"encoding/json/v2"
@@ -28,10 +28,10 @@ import (
 
 const (
 	chubSourceURL          string = "chub.ai"
-	chubMainURL            string = "chub.ai/characters/"                                     // Main CardURL for ChubAI
-	chubAlternateURL       string = "characterhub.org/characters/"                            // Mirror CardURL for ChubAI
+	chubMainURL            string = "chub.ai/characters/"                                     // Main NormalizedURL for ChubAI
+	chubAlternateURL       string = "characterhub.org/characters/"                            // Mirror NormalizedURL for ChubAI
 	chubApiURL             string = "https://api.chub.ai/api/characters/%s?full=true"         // Public API for retrieving metadata
-	chubApiCardDownloadURL string = "https://avatars.charhub.io/avatars/%s/chara_card_v2.png" // Download CardURL for retrieving card
+	chubApiCardDownloadURL string = "https://avatars.charhub.io/avatars/%s/chara_card_v2.png" // Download NormalizedURL for retrieving card
 	chubApiBookURL         string = "https://api.chub.ai/api/lorebooks/%s?full=true"          // Public API for retrieving books
 
 	chubAiTaglineFieldName string = "node.tagline"   // Tagline field name for ChubAI
@@ -46,13 +46,13 @@ var (
 )
 
 type chubAIFetcher struct {
-	BaseFetcher
+	BaseHandler
 }
 
 // NewChubAIFetcher - Create a new ChubAI source
-func NewChubAIFetcher(client *req.Client) Fetcher {
+func NewChubAIFetcher(client *req.Client) SourceHandler {
 	impl := &chubAIFetcher{
-		BaseFetcher: BaseFetcher{
+		BaseHandler: BaseHandler{
 			client:    client,
 			sourceID:  source.ChubAI,
 			sourceURL: chubSourceURL,
@@ -64,20 +64,12 @@ func NewChubAIFetcher(client *req.Client) Fetcher {
 	return impl
 }
 
-// FetchMetadata - Retrieve metadata for given url
-func (s *chubAIFetcher) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
-	// Create the API url for retrieving the metadata
+func (s *chubAIFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	metadataURL := fmt.Sprintf(chubApiURL, characterID)
+	return s.client.R().Get(metadataURL)
+}
 
-	// Retrieve the metadata (log error is response is invalid)
-	response, err := s.client.R().Get(metadataURL)
-	// Check if the response is a valid JSON
-	if !reqx.IsResponseOk(response, err) {
-		return nil, models.EmptyJsonResponse, s.fetchMetadataErr(normalizedURL, err)
-	}
-	// TaskOf the JSON string response
-	metadataResponse := gjson.Parse(response.String())
-
+func (s *chubAIFetcher) ExtractMetadata(normalizedURL string, characterID string, metadataResponse gjson.Result) (*models.CardInfo, error) {
 	// Retrieve the updated characterID (ChubAI allows creators to change username)
 	characterID = metadataResponse.Get("node.fullPath").String()
 	normalizedURL = s.NormalizeURL(characterID)
@@ -87,7 +79,7 @@ func (s *chubAIFetcher) FetchMetadata(normalizedURL string, characterID string) 
 	// Retrieve the character name
 	name := metadataResponse.Get("node.definition.name").String()
 
-	// For ChubAI characterID is "creator/CardName"
+	// For ChubAI characterID is "creator/Title"
 	creator := strings.Split(characterID, `/`)[0]
 	// Tagline for ChubAI is an actual tagline
 	tagline := metadataResponse.Get(chubAiTaglineFieldName).String()
@@ -109,16 +101,16 @@ func (s *chubAIFetcher) FetchMetadata(normalizedURL string, characterID string) 
 		gjsonx.Stringifier,
 	)
 
-	linkedBookResponses, linkedBookUpdateTime := s.retrieveLinkedBooks(metadataURL, bookIDs)
-	auxBookResponses, auxBookUpdateTime := s.retrieveAuxBooks(metadataURL, metadataResponse, bookIDs)
+	linkedBookResponses, linkedBookUpdateTime := s.retrieveLinkedBooks(normalizedURL, bookIDs)
+	auxBookResponses, auxBookUpdateTime := s.retrieveAuxBooks(normalizedURL, metadataResponse, bookIDs)
 
-	metadata := &models.Metadata{
+	metadata := &models.CardInfo{
 		Source:         s.sourceID,
-		CardURL:        normalizedURL,
+		NormalizedURL:  normalizedURL,
 		PlatformID:     metadataResponse.Get("node.id").String(),
 		CharacterID:    characterID,
-		CardName:       cardName,
-		CharacterName:  name,
+		Title:          cardName,
+		Name:           name,
 		Tags:           tags,
 		Creator:        creator,
 		Tagline:        tagline,
@@ -131,11 +123,11 @@ func (s *chubAIFetcher) FetchMetadata(normalizedURL string, characterID string) 
 		BookResponses:    linkedBookResponses,
 		AuxBookResponses: auxBookResponses,
 	}
-	return metadata, fullResponse, nil
+	return metadata, nil
 }
 
 // FetchPngCard - Retrieve card for given url
-func (s *chubAIFetcher) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (s *chubAIFetcher) FetchCharacterCard(normalizedURL string, characterID string, response models.JsonResponse) (*png.CharacterCard, error) {
 	metadataResponse := response.Metadata
 	chubCardURL := metadataResponse.Get("node.max_res_url").String()
 	backupURL := metadataResponse.Get("node.avatar_url").String()
@@ -149,15 +141,7 @@ func (s *chubAIFetcher) FetchCharacterCard(metadata *models.Metadata, response m
 	}
 	sheet := characterCard.Sheet
 
-	s.updateFieldsWithFallback(&sheet.Data, response.Metadata, metadata.CardURL)
-
-	// Assemble CreatorNotes using any creator notes in the downloaded card,
-	// and any description/tagline from the JSON response
-	// Append the tagline to the original creator notes
-	sheet.Data.CreatorNotes = stringsx.JoinNonBlank(
-		character.CreatorNotesSeparator,
-		metadata.Tagline, sheet.Data.CreatorNotes,
-	)
+	s.updateFieldsWithFallback(&sheet.Data, response.Metadata, normalizedURL)
 
 	// If there are no related books, no processing needed
 	if response.BookCount() == 0 {
@@ -169,7 +153,7 @@ func (s *chubAIFetcher) FetchCharacterCard(metadata *models.Metadata, response m
 
 	embeddedBook := s.parseBookGJson(
 		metadataResponse,
-		metadata.CardURL,
+		normalizedURL,
 		false,
 	)
 
@@ -181,13 +165,13 @@ func (s *chubAIFetcher) FetchCharacterCard(metadata *models.Metadata, response m
 		merger.AppendBook(embeddedBook)
 	}
 	for _, bookResponse := range response.BookResponses {
-		book := s.parseBookGJson(bookResponse, metadata.CardURL, true)
+		book := s.parseBookGJson(bookResponse, normalizedURL, true)
 		if book != nil {
 			merger.AppendBook(book)
 		}
 	}
 	for _, bookResponse := range response.AuxBookResponses {
-		book := s.parseBookGJson(bookResponse, metadata.CardURL, true)
+		book := s.parseBookGJson(bookResponse, normalizedURL, true)
 		if book != nil && (embeddedBook == nil || *embeddedBook.Name != *book.Name) {
 			merger.AppendBook(book)
 		}
@@ -353,7 +337,7 @@ func (s *chubAIFetcher) getChubIdentifier(characterID string) string {
 	return identifier
 }
 
-// fixAvatarURL - corrects the chub avatar CardURL in case it has the wrong path (replaces chara_char_v2 with chara_card_v2)
+// fixAvatarURL - corrects the chub avatar NormalizedURL in case it has the wrong path (replaces chara_char_v2 with chara_card_v2)
 func (s *chubAIFetcher) fixAvatarURL(avatarURL string) string {
 	avatarURL = strings.TrimSuffix(avatarURL, chubCharaPath)
 	avatarURL = avatarURL + chubCardPath

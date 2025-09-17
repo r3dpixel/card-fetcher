@@ -1,4 +1,4 @@
-package fetcher
+package impl
 
 import (
 	"strconv"
@@ -11,7 +11,6 @@ import (
 	"github.com/r3dpixel/card-parser/character"
 	"github.com/r3dpixel/card-parser/png"
 	"github.com/r3dpixel/toolkit/gjsonx"
-	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/symbols"
 	"github.com/tidwall/gjson"
@@ -24,8 +23,8 @@ const (
 
 	nyaiStartingRune rune   = 'a' // Starting rune for NyaiMe identifier conversion to PostID (base26 conversion)
 	nyaiMeSourceURL  string = "nyai.me"
-	nyaiMeBaseURL    string = "nyai.me/ai/bots/"     // Main CardURL for NyaiMe
-	nyaiMeApiURL     string = "https://api.nyai.me/" // API CardURL for NyaiMe
+	nyaiMeBaseURL    string = "nyai.me/ai/bots/"     // Main NormalizedURL for NyaiMe
+	nyaiMeApiURL     string = "https://api.nyai.me/" // API NormalizedURL for NyaiMe
 
 	nyaiMeShortDescriptionField string = "Post.ShortDescription" // The field name of the short description for NyaiMe
 	nyaiMeDateFormat            string = time.RFC3339Nano        // Date Format for NyaiMe
@@ -33,14 +32,14 @@ const (
 )
 
 type nyaiMeFetcher struct {
-	BaseFetcher
+	BaseHandler
 	headers map[string]string
 }
 
 // NewNyaiMeFetcher - Create a new NyaiMe source
-func NewNyaiMeFetcher(client *req.Client) Fetcher {
+func NewNyaiMeFetcher(client *req.Client) SourceHandler {
 	impl := &nyaiMeFetcher{
-		BaseFetcher: BaseFetcher{
+		BaseHandler: BaseHandler{
 			client:    client,
 			sourceID:  source.NyaiMe,
 			sourceURL: nyaiMeSourceURL,
@@ -58,25 +57,21 @@ func NewNyaiMeFetcher(client *req.Client) Fetcher {
 	return impl
 }
 
-// FetchMetadata - Retrieve metadata for given url
-func (s *nyaiMeFetcher) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
+func (s *nyaiMeFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	// Retrieve NyaiMe identifier
 	identifier := s.getIdentifier(characterID)
 	// Compute PostID (base26 conversion of the identifier)
 	postID := s.getPostID(identifier)
 
 	// Retrieve the metadata (log error is response is invalid)
-	jsonResponse, err := s.client.R().
+	return s.client.R().
 		SetHeaders(s.headers).
 		SetBodyString(s.downloadRequestBody(postID)).
 		Post(nyaiMeApiURL)
-	// Check if the response is a valid JSON
-	if !reqx.IsResponseOk(jsonResponse, err) {
-		return nil, models.EmptyJsonResponse, s.fetchMetadataErr(normalizedURL, err)
-	}
-	// TaskOf the JSON string response
-	metadataResponse := gjson.Parse(jsonResponse.String())
+}
 
+func (s *nyaiMeFetcher) ExtractMetadata(normalizedURL string, characterID string, metadataResponse gjson.Result) (*models.CardInfo, error) {
+	postID := metadataResponse.Get("Post.ID").String()
 	// Retrieve the real card name
 	cardName := metadataResponse.Get("Post.Title").String()
 	// Retrieve the character name
@@ -96,13 +91,13 @@ func (s *nyaiMeFetcher) FetchMetadata(normalizedURL string, characterID string) 
 	updateTime := s.fromDate(nyaiMeDateFormat, metadataResponse.Get("Post.EditedDate").String(), normalizedURL)
 	createTime := s.fromDate(nyaiMeDateFormat, metadataResponse.Get("Post.Date").String(), normalizedURL)
 
-	metadata := &models.Metadata{
+	metadata := &models.CardInfo{
 		Source:         s.sourceID,
-		CardURL:        normalizedURL,
-		PlatformID:     strconv.Itoa(postID),
+		NormalizedURL:  normalizedURL,
+		PlatformID:     postID,
 		CharacterID:    characterID,
-		CardName:       cardName,
-		CharacterName:  name,
+		Title:          cardName,
+		Name:           name,
 		Creator:        creator,
 		Tagline:        tagline,
 		CreateTime:     createTime,
@@ -111,18 +106,14 @@ func (s *nyaiMeFetcher) FetchMetadata(normalizedURL string, characterID string) 
 		Tags:           tags,
 	}
 
-	// Return metadata
-	fullResponse := models.JsonResponse{
-		Metadata: metadataResponse,
-	}
-	return metadata, fullResponse, nil
+	return metadata, nil
 }
 
 // FetchPngCard - Retrieve card for given url
-func (s *nyaiMeFetcher) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (s *nyaiMeFetcher) FetchCharacterCard(normalizedURL string, characterID string, response models.JsonResponse) (*png.CharacterCard, error) {
 	metadataResponse := response.Metadata
 
-	// Retrieve png sheet CardURL
+	// Retrieve png sheet NormalizedURL
 	nyaiMeCardURL := metadataResponse.Get("Post.ImageURL").String()
 	// Download PNG sheet
 	rawCard, err := png.FromURL(s.client, nyaiMeCardURL).DeepScan().Get()
@@ -146,7 +137,7 @@ func (s *nyaiMeFetcher) FetchCharacterCard(metadata *models.Metadata, response m
 	// Assign the assembled creator notes
 	sheet.Data.CreatorNotes = stringsx.JoinNonBlank(
 		character.CreatorNotesSeparator,
-		metadata.Tagline, introduction, sheet.Data.CreatorNotes,
+		introduction, sheet.Data.CreatorNotes,
 	)
 
 	// Return the parsed PNG sheet

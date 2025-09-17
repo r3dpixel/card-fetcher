@@ -14,43 +14,49 @@ func createConsistentPair() (*Metadata, *character.Sheet) {
 	now := time.Now()
 	createTime := now.Add(-2 * time.Hour)
 	updateTime := now.Add(-1 * time.Hour)
-	bookUpdateTime := now // This is the latest time
+	bookUpdateTime := now
 
 	metadata := &Metadata{
-		Source:         source.ID("test-source"),
-		CardURL:        "https://example.com/card",
-		DirectURL:      "https://example.com/direct",
-		PlatformID:     "platform-123",
-		CharacterID:    "char-456",
-		CardName:       "Test Card",
-		CharacterName:  "Test Character",
-		Creator:        "Test Creator",
-		Tagline:        "This is a test tagline.",
-		CreateTime:     timestamp.Nano(createTime.UnixNano()),
-		UpdateTime:     timestamp.Nano(updateTime.UnixNano()),
-		BookUpdateTime: timestamp.Nano(bookUpdateTime.UnixNano()),
-		Tags: []Tag{
-			{Slug: "fantasy", Name: "Fantasy"},
-			{Slug: "adventure", Name: "Adventure"},
+		CardInfo: CardInfo{
+			Source:        source.ID("test-source"),
+			NormalizedURL: "https://example.com/card",
+			DirectURL:     "https://example.com/direct",
+			PlatformID:    "platform-123",
+			CharacterID:   "char-456",
+			Name:          "Test Character",
+			Title:         "Test Card",
+			Tagline:       "This is a test tagline.",
+			CreateTime:    timestamp.Nano(createTime.UnixNano()),
+			UpdateTime:    timestamp.Nano(updateTime.UnixNano()),
+			Tags: []Tag{
+				{Slug: "fantasy", Name: "Fantasy"},
+				{Slug: "adventure", Name: "Adventure"},
+			},
 		},
+		CreatorInfo: CreatorInfo{
+			Nickname:   "Test CreatorInfo",
+			Username:   "testcreator",
+			PlatformID: "creator-123",
+		},
+		BookUpdateTime: timestamp.Nano(bookUpdateTime.UnixNano()),
 	}
 
-	card := &character.Sheet{
-		Data: character.Data{
+	sheet := &character.Sheet{
+		Content: character.Content{
 			SourceID:         "test-source",
 			CharacterID:      "char-456",
 			PlatformID:       "platform-123",
 			DirectLink:       "https://example.com/direct",
-			CardName:         "Test Card",
-			CharacterName:    "Test Character",
-			Creator:          "Test Creator",
+			Title:            "Test Card",
+			Name:             "Test Character",
+			Creator:          "Test CreatorInfo",
 			CreatorNotes:     "This is a test tagline.\nAnd some more notes.",
 			CreationDate:     timestamp.Seconds(createTime.Unix()),
 			ModificationDate: timestamp.Seconds(bookUpdateTime.Unix()), // Uses the latest of the update times
 			Tags:             []string{"Fantasy", "Adventure"},
 		},
 	}
-	return metadata, card
+	return metadata, sheet
 }
 
 func TestMetadata_IsConsistentWith(t *testing.T) {
@@ -65,7 +71,7 @@ func TestMetadata_IsConsistentWith(t *testing.T) {
 		// Manually set UpdateTime to be the most recent
 		latestTime := time.Now().Add(5 * time.Minute)
 		metadata.UpdateTime = timestamp.Nano(latestTime.UnixNano())
-		card.Data.ModificationDate = timestamp.Seconds(latestTime.Unix())
+		card.Content.ModificationDate = timestamp.Seconds(latestTime.Unix())
 
 		assert.True(t, metadata.IsConsistentWith(card), "Expected consistency when UpdateTime is the latest")
 	})
@@ -82,39 +88,39 @@ func TestMetadata_IsConsistentWith(t *testing.T) {
 	t.Run("should return false for inconsistent data", func(t *testing.T) {
 		testCases := []struct {
 			name    string
-			mutator func(m *Metadata, c *character.Sheet) // Function to make the data inconsistent
+			mutator func(r *Metadata, c *character.Sheet) // Function to make the data inconsistent
 		}{
 			{
 				name:    "mismatched character ID",
-				mutator: func(m *Metadata, c *character.Sheet) { c.Data.CharacterID = "char-different" },
+				mutator: func(r *Metadata, c *character.Sheet) { c.Content.CharacterID = "char-different" },
 			},
 			{
 				name:    "mismatched card name",
-				mutator: func(m *Metadata, c *character.Sheet) { m.CardName = "A Different Name" },
+				mutator: func(r *Metadata, c *character.Sheet) { r.Title = "A Different Name" },
 			},
 			{
 				name:    "tagline is not a prefix of creator notes",
-				mutator: func(m *Metadata, c *character.Sheet) { c.Data.CreatorNotes = "Notes do not start with tagline" },
+				mutator: func(r *Metadata, c *character.Sheet) { c.Content.CreatorNotes = "Notes do not start with tagline" },
 			},
 			{
 				name:    "mismatched creation time",
-				mutator: func(m *Metadata, c *character.Sheet) { m.CreateTime = 0 },
+				mutator: func(r *Metadata, c *character.Sheet) { r.CreateTime = 0 },
 			},
 			{
 				name:    "mismatched modification time",
-				mutator: func(m *Metadata, c *character.Sheet) { c.Data.ModificationDate = 0 },
+				mutator: func(r *Metadata, c *character.Sheet) { c.Content.ModificationDate = 0 },
 			},
 			{
 				name:    "tags have different length",
-				mutator: func(m *Metadata, c *character.Sheet) { c.Data.Tags = []string{"Fantasy"} },
+				mutator: func(r *Metadata, c *character.Sheet) { c.Content.Tags = []string{"Fantasy"} },
 			},
 			{
 				name:    "tags have different content",
-				mutator: func(m *Metadata, c *character.Sheet) { m.Tags = []Tag{{Name: "Sci-Fi"}, {Name: "Adventure"}} },
+				mutator: func(r *Metadata, c *character.Sheet) { r.Tags = []Tag{{Name: "Sci-Fi"}, {Name: "Adventure"}} },
 			},
 			{
 				name:    "tags have different order",
-				mutator: func(m *Metadata, c *character.Sheet) { c.Data.Tags = []string{"Adventure", "Fantasy"} },
+				mutator: func(r *Metadata, c *character.Sheet) { c.Content.Tags = []string{"Adventure", "Fantasy"} },
 			},
 		}
 
@@ -133,22 +139,28 @@ func TestMetadata_IsConsistentWith(t *testing.T) {
 
 func TestMetadata_Clone(t *testing.T) {
 	original := &Metadata{
-		Source:         source.ID("test-source"),
-		CardURL:        "https://example.com/card",
-		DirectURL:      "https://direct.example.com/card",
-		PlatformID:     "platform-123",
-		CharacterID:    "char-456",
-		CardName:       "Test Card",
-		CharacterName:  "Test Character",
-		Creator:        "Test Creator",
-		Tagline:        "This is a test tagline.",
-		CreateTime:     timestamp.Nano(time.Now().Add(-24 * time.Hour).UnixNano()),
-		UpdateTime:     timestamp.Nano(time.Now().Add(-12 * time.Hour).UnixNano()),
-		BookUpdateTime: timestamp.Nano(time.Now().UnixNano()),
-		Tags: []Tag{
-			{Slug: "tag-1", Name: "Tag One"},
-			{Slug: "tag-2", Name: "Tag Two"},
+		CardInfo: CardInfo{
+			Source:        source.ID("test-source"),
+			NormalizedURL: "https://example.com/card",
+			DirectURL:     "https://direct.example.com/card",
+			PlatformID:    "platform-123",
+			CharacterID:   "char-456",
+			Title:         "Test Card",
+			Name:          "Test Character",
+			Tagline:       "This is a test tagline.",
+			CreateTime:    timestamp.Nano(time.Now().Add(-24 * time.Hour).UnixNano()),
+			UpdateTime:    timestamp.Nano(time.Now().Add(-12 * time.Hour).UnixNano()),
+			Tags: []Tag{
+				{Slug: "tag-1", Name: "Tag One"},
+				{Slug: "tag-2", Name: "Tag Two"},
+			},
 		},
+		CreatorInfo: CreatorInfo{
+			Nickname:   "Test CreatorInfo",
+			Username:   "testcreator",
+			PlatformID: "creator-123",
+		},
+		BookUpdateTime: timestamp.Nano(time.Now().UnixNano()),
 	}
 
 	clone := original.Clone()

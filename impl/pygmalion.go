@@ -1,4 +1,4 @@
-package fetcher
+package impl
 
 import (
 	"encoding/json/v2"
@@ -30,22 +30,22 @@ const (
 	pygmalionReferer = "https://pygmalion.chat/" // Header for Pygmalion requests
 
 	pygmalionSourceURL     = "pygmalion.chat"
-	pygmalionBaseURL       = "pygmalion.chat/character/"                                                           // Main CardURL for Pygmalion
-	pygmalionApiURL        = "https://server.pygmalion.chat/galatea.v1.PublicCharacterService/Character"           // API CardURL for Pygmalion
-	pygmalionAuthURL       = "https://auth.pygmalion.chat/session"                                                 // Authentication CardURL for Pygmalion
-	pygmalionCardExportURL = "https://server.pygmalion.chat/api/export/character/%s/v2"                            // Avatar Download CardURL for Pygmalion (contains chara metadata - PNG V2)
-	pygmalionLinkedBookURL = "https://server.pygmalion.chat/galatea.v1.UserLorebookService/LorebooksByCharacterId" // Book Download CardURL for Pygmalion
+	pygmalionBaseURL       = "pygmalion.chat/character/"                                                           // Main NormalizedURL for Pygmalion
+	pygmalionApiURL        = "https://server.pygmalion.chat/galatea.v1.PublicCharacterService/Character"           // API NormalizedURL for Pygmalion
+	pygmalionAuthURL       = "https://auth.pygmalion.chat/session"                                                 // Authentication NormalizedURL for Pygmalion
+	pygmalionCardExportURL = "https://server.pygmalion.chat/api/export/character/%s/v2"                            // Avatar Download NormalizedURL for Pygmalion (contains chara metadata - PNG V2)
+	pygmalionLinkedBookURL = "https://server.pygmalion.chat/galatea.v1.UserLorebookService/LorebooksByCharacterId" // Book Download NormalizedURL for Pygmalion
 )
 
 type pygmalionFetcher struct {
-	BaseFetcher
+	BaseHandler
 	identityReader cred.IdentityReader
 	authManager    *reqx.AuthManager
 	headers        map[string]string
 }
 
 // NewPygmalionFetcher - Create a new ChubAI source
-func NewPygmalionFetcher(client *req.Client, identityReader cred.IdentityReader) Fetcher {
+func NewPygmalionFetcher(client *req.Client, identityReader cred.IdentityReader) SourceHandler {
 	impl := &pygmalionFetcher{
 		identityReader: identityReader,
 		headers: map[string]string{
@@ -53,7 +53,7 @@ func NewPygmalionFetcher(client *req.Client, identityReader cred.IdentityReader)
 			"Origin":  pygmalionOrigin,
 			"Host":    pygmalionHost,
 		},
-		BaseFetcher: BaseFetcher{
+		BaseHandler: BaseHandler{
 			client:    client,
 			sourceID:  source.Pygmalion,
 			sourceURL: pygmalionSourceURL,
@@ -66,24 +66,19 @@ func NewPygmalionFetcher(client *req.Client, identityReader cred.IdentityReader)
 	return impl
 }
 
-// FetchMetadata - Retrieve metadata for given url
-func (s *pygmalionFetcher) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
-	// Send POST request for metadata (check if response is valid JSON, log error)
+func (s *pygmalionFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	metadataRequestBody := map[string]string{
 		"characterMetaId": characterID,
 	}
 	requestBodyBytes, _ := json.Marshal(metadataRequestBody)
-	jsonResponse, err := s.client.R().
+	return s.client.R().
 		SetContentType(reqx.JsonApplicationContentType).
 		SetBody(requestBodyBytes).
 		Post(pygmalionApiURL)
-	// Check if the response is a valid JSON
-	if !reqx.IsResponseOk(jsonResponse, err) {
-		return nil, models.EmptyJsonResponse, s.fetchMetadataErr(normalizedURL, err)
-	}
-	// TaskOf the JSON string response
-	metadataResponse := gjson.Parse(jsonResponse.String())
+}
 
+// FetchMetadata - Retrieve metadata for given url
+func (s *pygmalionFetcher) ExtractMetadata(normalizedURL string, characterID string, metadataResponse gjson.Result) (*models.CardInfo, error) {
 	// Retrieve the real card name
 	cardName := metadataResponse.Get("character.displayName").String()
 	// Retrieve the character name
@@ -108,13 +103,13 @@ func (s *pygmalionFetcher) FetchMetadata(normalizedURL string, characterID strin
 	})
 
 	// Return the metadata
-	metadata := &models.Metadata{
+	metadata := &models.CardInfo{
 		Source:         s.sourceID,
-		CardURL:        normalizedURL,
+		NormalizedURL:  normalizedURL,
 		PlatformID:     characterID,
 		CharacterID:    characterID,
-		CardName:       cardName,
-		CharacterName:  name,
+		Title:          cardName,
+		Name:           name,
 		Creator:        creator,
 		Tagline:        tagline,
 		CreateTime:     createTime,
@@ -127,13 +122,13 @@ func (s *pygmalionFetcher) FetchMetadata(normalizedURL string, characterID strin
 		Metadata:      metadataResponse,
 		BookResponses: []gjson.Result{bookResponse},
 	}
-	return metadata, fullResponse, nil
+	return metadata, nil
 }
 
 // FetchPngCard - Retrieve card for given url
-func (s *pygmalionFetcher) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (s *pygmalionFetcher) FetchCharacterCard(normalizedURL string, characterID string, response models.JsonResponse) (*png.CharacterCard, error) {
 	metadataResponse := response.Metadata
-	characterCard, err := s.retrieveCardData(metadata, metadataResponse)
+	characterCard, err := s.retrieveCardData(characterID, metadataResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +140,7 @@ func (s *pygmalionFetcher) FetchCharacterCard(metadata *models.Metadata, respons
 	return characterCard, nil
 }
 
-func (s *pygmalionFetcher) retrieveCardData(metadata *models.Metadata, gJsonResponse gjson.Result) (*png.CharacterCard, error) {
+func (s *pygmalionFetcher) retrieveCardData(characterID string, gJsonResponse gjson.Result) (*png.CharacterCard, error) {
 	// Download avatar and transform to PNG
 	avatarUrl := gJsonResponse.Get("character.avatarUrl").String()
 	rawCard, err := png.FromURL(s.client, avatarUrl).DeepScan().Get()
@@ -158,7 +153,7 @@ func (s *pygmalionFetcher) retrieveCardData(metadata *models.Metadata, gJsonResp
 	}
 
 	// TaskOf the characterCard card (from Pygmalion export)
-	exportUrl := fmt.Sprintf(pygmalionCardExportURL, metadata.CharacterID)
+	exportUrl := fmt.Sprintf(pygmalionCardExportURL, characterID)
 	response, err := s.client.R().
 		SetContentType(reqx.JsonApplicationContentType).
 		Get(exportUrl)
@@ -174,6 +169,7 @@ func (s *pygmalionFetcher) retrieveCardData(metadata *models.Metadata, gJsonResp
 	if err != nil {
 		return nil, err
 	}
+	characterCard.Sheet.Data.CreatorNotes = stringsx.Empty
 
 	// Return the parsed PNG card
 	return characterCard, nil

@@ -7,11 +7,12 @@ import (
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/png"
+	"github.com/r3dpixel/toolkit/reqx"
+	"github.com/r3dpixel/toolkit/trace"
 )
 
 type Task interface {
 	SourceID() source.ID
-	OriginalURL() string
 	NormalizedURL() string
 	FetchMetadata() (*models.Metadata, error)
 	FetchCharacterCard() (*png.CharacterCard, error)
@@ -19,75 +20,127 @@ type Task interface {
 }
 
 type task struct {
-	fetchMetadataOnce sync.Once
-	fetchCardOnce     sync.Once
+	fetchMetadata      func() (*models.Metadata, error)
+	fetchCharacterCard func() (*png.CharacterCard, error)
 
-	fetcher       fetcher.Fetcher
-	originalURL   string
+	sourceID      source.ID
 	normalizedURL string
 	characterID   string
-
-	response    models.JsonResponse
-	metadata    *models.Metadata
-	metadataErr error
-	card        *png.CharacterCard
-	cardErr     error
 }
 
-func New(fetcher fetcher.Fetcher, url string, matchedURL string) Task {
-	characterID := fetcher.CharacterID(url, matchedURL)
-	normalizedURL := fetcher.NormalizeURL(characterID)
+func New(f fetcher.Fetcher, url string, matchedURL string) Task {
+	characterID := f.CharacterID(url, matchedURL)
+	normalizedURL := f.NormalizeURL(characterID)
+
+	binderFlow := sync.OnceValues(func() (*fetcher.Binder, error) {
+		return executeBinderFlow(f, characterID, normalizedURL)
+	})
+
+	metadataFlow := sync.OnceValues(func() (*models.Metadata, error) {
+		return executeMetadataFlow(f, binderFlow)
+	})
+
+	characterCardFlow := sync.OnceValues(func() (*png.CharacterCard, error) {
+		return executeCharacterCardFlow(f, binderFlow, metadataFlow)
+	})
+
 	return &task{
-		fetcher:       fetcher,
-		originalURL:   url,
-		normalizedURL: normalizedURL,
-		characterID:   characterID,
+		sourceID:           f.SourceID(),
+		characterID:        characterID,
+		normalizedURL:      normalizedURL,
+		fetchMetadata:      metadataFlow,
+		fetchCharacterCard: characterCardFlow,
 	}
 }
 
 func (t *task) SourceID() source.ID {
-	return t.fetcher.SourceID()
-}
-
-func (t *task) OriginalURL() string {
-	return t.originalURL
+	return t.sourceID
 }
 
 func (t *task) NormalizedURL() string {
 	return t.normalizedURL
 }
 
-func (t *task) internalFetchMetadata() {
-	t.fetchMetadataOnce.Do(func() {
-		t.metadata, t.response, t.metadataErr = t.fetcher.FetchMetadata(t.normalizedURL, t.characterID)
-	})
-}
-
 func (t *task) FetchMetadata() (*models.Metadata, error) {
-	t.internalFetchMetadata()
-	if t.metadataErr != nil {
-		return nil, t.metadataErr
-	}
-	return t.metadata.Clone(), t.metadataErr
+	return t.fetchMetadata()
 }
 
 func (t *task) FetchCharacterCard() (*png.CharacterCard, error) {
-	t.internalFetchMetadata()
-	if t.metadataErr != nil {
-		return nil, t.metadataErr
-	}
-
-	t.fetchCardOnce.Do(func() {
-		t.card, t.cardErr = t.fetcher.FetchCharacterCard(t.metadata, t.response)
-	})
-
-	return t.card, t.cardErr
+	return t.fetchCharacterCard()
 }
 
 func (t *task) FetchAll() (*models.Metadata, *png.CharacterCard, error) {
-	card, err := t.FetchCharacterCard()
+	metadata, err := t.fetchMetadata()
 	if err != nil {
 		return nil, nil, err
 	}
-	return t.metadata.Clone(), card, nil
+	characterCard, err := t.fetchCharacterCard()
+	if err != nil {
+		return nil, nil, err
+	}
+	return metadata, characterCard, nil
+}
+
+func executeBinderFlow(
+	f fetcher.Fetcher,
+	characterID,
+	normalizedURL string,
+) (*fetcher.Binder, error) {
+	metadataResponse, err := f.FetchMetadataResponse(characterID)
+	if !reqx.IsResponseErrOk(metadataResponse, err) {
+		return nil, trace.Err().Wrap(err).Field(trace.URL, f.DirectURL(characterID)).Msg("failed to fetch metadata response")
+	}
+	metadataJSON, err := f.ParseMetadataResponse(metadataResponse)
+	if err != nil {
+		return nil, err
+	}
+	metadataBinder, err := f.CreateBinder(characterID, normalizedURL, metadataJSON)
+	if err != nil {
+		return nil, err
+	}
+	bookBinder, err := f.FetchBookResponses(metadataBinder)
+	if err != nil {
+		return nil, err
+	}
+	return &fetcher.Binder{MetadataBinder: *metadataBinder, BookBinder: *bookBinder}, nil
+}
+
+func executeMetadataFlow(
+	f fetcher.Fetcher,
+	binderFlow func() (*fetcher.Binder, error),
+) (*models.Metadata, error) {
+	binder, err := binderFlow()
+	if err != nil {
+		return nil, err
+	}
+	cardInfo, err := f.FetchCardInfo(&binder.MetadataBinder)
+	if err != nil {
+		return nil, err
+	}
+	creatorInfo, err := f.FetchCreatorInfo(&binder.MetadataBinder)
+	if err != nil {
+		return nil, err
+	}
+	return &models.Metadata{CardInfo: *cardInfo, CreatorInfo: *creatorInfo, BookUpdateTime: binder.UpdateTime}, nil
+}
+
+func executeCharacterCardFlow(
+	f fetcher.Fetcher,
+	binderFlow func() (*fetcher.Binder, error),
+	metadataFlow func() (*models.Metadata, error),
+) (*png.CharacterCard, error) {
+	binder, err := binderFlow()
+	if err != nil {
+		return nil, err
+	}
+	metadata, err := metadataFlow()
+	if err != nil {
+		return nil, err
+	}
+	characterCard, err := f.FetchCharacterCard(binder)
+	if err != nil {
+		return nil, err
+	}
+	f.PatchSheet(characterCard.Sheet, metadata)
+	return characterCard, nil
 }

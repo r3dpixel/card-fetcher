@@ -60,11 +60,11 @@ func (m *mockFetcher) BaseURLs() []string {
 func (m *mockFetcher) MainURL() string {
 	return ""
 }
-func (m *mockFetcher) Extends(f fetcher.Fetcher) {}
-func (m *mockFetcher) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
+func (m *mockFetcher) Extends(f fetcher.SourceHandler) {}
+func (m *mockFetcher) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.CardInfo, models.JsonResponse, error) {
 	return nil, models.EmptyJsonResponse, nil
 }
-func (m *mockFetcher) FetchCharacterCard(c *req.Client, metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (m *mockFetcher) FetchCharacterCard(c *req.Client, metadata *models.CardInfo, response models.JsonResponse) (*png.CharacterCard, error) {
 	return nil, nil
 }
 
@@ -73,12 +73,12 @@ type mockFactory struct {
 	mock.Mock
 }
 
-func (m *mockFactory) FetcherOf(id source.ID) fetcher.Fetcher {
+func (m *mockFactory) FetcherOf(id source.ID) fetcher.SourceHandler {
 	args := m.Called(id)
 	if args.Get(0) == nil {
 		return nil
 	}
-	return args.Get(0).(fetcher.Fetcher)
+	return args.Get(0).(fetcher.SourceHandler)
 }
 
 func newTestRouter(f factory.Factory) *Router {
@@ -142,7 +142,7 @@ func TestNew(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Pass a nil factory, as New() initializes its own.
-			router := New(Options{ClientOptions: tc.opts, FactoryOptions: factory.FactoryOptions{}})
+			router := New(Options{ClientOptions: tc.opts, FactoryOptions: factory.Options{}})
 			tc.assert(t, router)
 		})
 	}
@@ -207,7 +207,7 @@ func TestRouter_TaskDispatching(t *testing.T) {
 			assert.Equal(t, "site-a.com/normalized/1", taskInstance.NormalizedURL())
 		})
 
-		t.Run("Fails for unknown CardURL", func(t *testing.T) {
+		t.Run("Fails for unknown NormalizedURL", func(t *testing.T) {
 			_, ok := router.TaskOf("https://unknown.com/char/1")
 			assert.False(t, ok)
 		})
@@ -250,7 +250,7 @@ func TestRouter_TaskDispatching(t *testing.T) {
 
 func TestRouter_Integrations(t *testing.T) {
 	r := New(Options{
-		FactoryOptions: factory.FactoryOptions{
+		FactoryOptions: factory.Options{
 			PygmalionIdentityProvider: cred.NewManager("pygmalion", cred.Env),
 		},
 		ClientOptions: reqx.ClientOptions{

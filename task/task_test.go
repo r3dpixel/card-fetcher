@@ -28,15 +28,15 @@ func (m *mockFetcher) IsSourceUp(c *req.Client) bool {
 	return args.Bool(0)
 }
 
-func (m *mockFetcher) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
+func (m *mockFetcher) FetchMetadata(c *req.Client, normalizedURL string, characterID string) (*models.CardInfo, models.JsonResponse, error) {
 	args := m.Called(c, normalizedURL, characterID)
 	if args.Get(0) == nil {
 		return nil, args.Get(1).(models.JsonResponse), args.Error(2)
 	}
-	return args.Get(0).(*models.Metadata), args.Get(1).(models.JsonResponse), args.Error(2)
+	return args.Get(0).(*models.CardInfo), args.Get(1).(models.JsonResponse), args.Error(2)
 }
 
-func (m *mockFetcher) FetchCharacterCard(c *req.Client, metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (m *mockFetcher) FetchCharacterCard(c *req.Client, metadata *models.CardInfo, response models.JsonResponse) (*png.CharacterCard, error) {
 	args := m.Called(c, metadata, response)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -74,7 +74,7 @@ func (m *mockFetcher) BaseURLs() []string {
 	return args.Get(0).([]string)
 }
 
-func (m *mockFetcher) Extends(f fetcher.Fetcher) {
+func (m *mockFetcher) Extends(f fetcher.SourceHandler) {
 	m.Called(f)
 }
 
@@ -103,8 +103,8 @@ func TestNew(t *testing.T) {
 func TestTask_FetchMetadata(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		mockF := new(mockFetcher)
-		expectedMetadata := &models.Metadata{CardName: "Test Card"}
-		mockF.On("FetchMetadata", mock.Anything, mock.Anything, mock.Anything).Return(expectedMetadata, models.EmptyJsonResponse, nil).Once()
+		expectedMetadata := &models.CardInfo{Title: "Test Card"}
+		mockF.On("FetchCardInfo", mock.Anything, mock.Anything, mock.Anything).Return(expectedMetadata, models.EmptyJsonResponse, nil).Once()
 
 		taskInstance := &task{fetcher: mockF, client: req.C()}
 
@@ -122,7 +122,7 @@ func TestTask_FetchMetadata(t *testing.T) {
 	t.Run("Error", func(t *testing.T) {
 		mockF := new(mockFetcher)
 		expectedErr := errors.New("metadata fetch failed")
-		mockF.On("FetchMetadata", mock.Anything, mock.Anything, mock.Anything).Return(nil, models.EmptyJsonResponse, expectedErr).Once()
+		mockF.On("FetchCardInfo", mock.Anything, mock.Anything, mock.Anything).Return(nil, models.EmptyJsonResponse, expectedErr).Once()
 
 		taskInstance := &task{fetcher: mockF, client: req.C()}
 		meta, err := taskInstance.FetchMetadata()
@@ -137,9 +137,9 @@ func TestTask_FetchMetadata(t *testing.T) {
 func TestTask_FetchCard(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		mockF := new(mockFetcher)
-		metadata := &models.Metadata{CardName: "Test Card"}
+		metadata := &models.CardInfo{Title: "Test Card"}
 		expectedCard := &png.CharacterCard{}
-		mockF.On("FetchMetadata", mock.Anything, mock.Anything, mock.Anything).Return(metadata, models.EmptyJsonResponse, nil).Once()
+		mockF.On("FetchCardInfo", mock.Anything, mock.Anything, mock.Anything).Return(metadata, models.EmptyJsonResponse, nil).Once()
 		mockF.On("FetchCharacterCard", mock.Anything, metadata, models.EmptyJsonResponse).Return(expectedCard, nil).Once()
 
 		taskInstance := &task{fetcher: mockF, client: req.C()}
@@ -154,10 +154,10 @@ func TestTask_FetchCard(t *testing.T) {
 		mockF.AssertExpectations(t)
 	})
 
-	t.Run("Metadata fetch fails", func(t *testing.T) {
+	t.Run("CardInfo fetch fails", func(t *testing.T) {
 		mockF := new(mockFetcher)
 		expectedErr := errors.New("metadata fetch failed")
-		mockF.On("FetchMetadata", mock.Anything, mock.Anything, mock.Anything).Return(nil, models.EmptyJsonResponse, expectedErr).Once()
+		mockF.On("FetchCardInfo", mock.Anything, mock.Anything, mock.Anything).Return(nil, models.EmptyJsonResponse, expectedErr).Once()
 
 		taskInstance := &task{fetcher: mockF, client: req.C()}
 		card, err := taskInstance.FetchCharacterCard()
@@ -171,9 +171,9 @@ func TestTask_FetchCard(t *testing.T) {
 
 	t.Run("Card fetch fails", func(t *testing.T) {
 		mockF := new(mockFetcher)
-		metadata := &models.Metadata{CardName: "Test Card"}
+		metadata := &models.CardInfo{Title: "Test Card"}
 		expectedErr := errors.New("card fetch failed")
-		mockF.On("FetchMetadata", mock.Anything, mock.Anything, mock.Anything).Return(metadata, models.EmptyJsonResponse, nil).Once()
+		mockF.On("FetchCardInfo", mock.Anything, mock.Anything, mock.Anything).Return(metadata, models.EmptyJsonResponse, nil).Once()
 		mockF.On("FetchCharacterCard", mock.Anything, metadata, models.EmptyJsonResponse).Return(nil, expectedErr).Once()
 
 		taskInstance := &task{fetcher: mockF, client: req.C()}
@@ -189,9 +189,9 @@ func TestTask_FetchCard(t *testing.T) {
 func TestTask_FetchAll(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		mockF := new(mockFetcher)
-		metadata := &models.Metadata{CardName: "Test Card"}
+		metadata := &models.CardInfo{Title: "Test Card"}
 		card := &png.CharacterCard{}
-		mockF.On("FetchMetadata", mock.Anything, mock.Anything, mock.Anything).Return(metadata, models.EmptyJsonResponse, nil).Once()
+		mockF.On("FetchCardInfo", mock.Anything, mock.Anything, mock.Anything).Return(metadata, models.EmptyJsonResponse, nil).Once()
 		mockF.On("FetchCharacterCard", mock.Anything, metadata, models.EmptyJsonResponse).Return(card, nil).Once()
 
 		taskInstance := &task{fetcher: mockF, client: req.C()}
@@ -207,7 +207,7 @@ func TestTask_FetchAll(t *testing.T) {
 	t.Run("Error propagates from FetchCharacterCard", func(t *testing.T) {
 		mockF := new(mockFetcher)
 		expectedErr := errors.New("any fetch failed")
-		mockF.On("FetchMetadata", mock.Anything, mock.Anything, mock.Anything).Return(nil, models.EmptyJsonResponse, expectedErr).Once()
+		mockF.On("FetchCardInfo", mock.Anything, mock.Anything, mock.Anything).Return(nil, models.EmptyJsonResponse, expectedErr).Once()
 
 		taskInstance := &task{fetcher: mockF, client: req.C()}
 		meta, card, err := taskInstance.FetchAll()
@@ -222,10 +222,10 @@ func TestTask_FetchAll(t *testing.T) {
 
 func TestTask_Concurrency(t *testing.T) {
 	mockF := new(mockFetcher)
-	metadata := &models.Metadata{CardName: "Concurrent Card"}
+	metadata := &models.CardInfo{Title: "Concurrent Card"}
 	card := &png.CharacterCard{}
 
-	mockF.On("FetchMetadata", mock.Anything, mock.Anything, mock.Anything).Return(metadata, models.EmptyJsonResponse, nil).Once()
+	mockF.On("FetchCardInfo", mock.Anything, mock.Anything, mock.Anything).Return(metadata, models.EmptyJsonResponse, nil).Once()
 	mockF.On("FetchCharacterCard", mock.Anything, metadata, models.EmptyJsonResponse).Return(card, nil).Once()
 
 	taskInstance := &task{fetcher: mockF, client: req.C()}

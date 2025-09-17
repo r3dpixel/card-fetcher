@@ -1,4 +1,4 @@
-package fetcher
+package impl
 
 import (
 	"fmt"
@@ -10,7 +10,6 @@ import (
 	"github.com/r3dpixel/card-parser/character"
 	"github.com/r3dpixel/card-parser/png"
 	"github.com/r3dpixel/toolkit/gjsonx"
-	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/tidwall/gjson"
 )
@@ -19,9 +18,9 @@ const (
 	pephopUuidLength int = 36 // PepHop Slug length
 
 	pephopSourceURL string = "pephop.ai"
-	pephopBaseURL   string = "pephop.ai/characters/"                                          // Main CardURL for PepHop
-	pephopApiURL    string = "https://api.eosai.chat/characters/%s"                           // API CardURL for PepHop
-	pephopAvatarURL string = "https://sp.eosai.chat//storage/v1/object/public/bot-avatars/%s" // Avatar Download CardURL for PepHop
+	pephopBaseURL   string = "pephop.ai/characters/"                                          // Main NormalizedURL for PepHop
+	pephopApiURL    string = "https://api.eosai.chat/characters/%s"                           // API NormalizedURL for PepHop
+	pephopAvatarURL string = "https://sp.eosai.chat//storage/v1/object/public/bot-avatars/%s" // Avatar Download NormalizedURL for PepHop
 
 	pephopFirstMessageField    string = "first_message"   // First Message Field for PepHop
 	pephopMessageExamplesField string = "example_dialogs" // Message Examples Field for PepHop
@@ -29,13 +28,13 @@ const (
 )
 
 type pephopFetcher struct {
-	BaseFetcher
+	BaseHandler
 }
 
 // NewPephopFetcher - Create a new ChubAI source
-func NewPephopFetcher(client *req.Client) Fetcher {
+func NewPephopFetcher(client *req.Client) SourceHandler {
 	impl := &pephopFetcher{
-		BaseFetcher: BaseFetcher{
+		BaseHandler: BaseHandler{
 			client:    client,
 			sourceID:  source.PepHop,
 			sourceURL: pephopSourceURL,
@@ -47,20 +46,12 @@ func NewPephopFetcher(client *req.Client) Fetcher {
 	return impl
 }
 
-// FetchMetadata - Retrieve metadata for given url
-func (s *pephopFetcher) FetchMetadata(normalizedURL string, characterID string) (*models.Metadata, models.JsonResponse, error) {
-	// Create the API url for retrieving the metadata
+func (s *pephopFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	metadataURL := fmt.Sprintf(pephopApiURL, characterID)
+	return s.client.R().Get(metadataURL)
+}
 
-	// Retrieve the metadata (log error is response is invalid)
-	response, err := s.client.R().Get(metadataURL)
-	// Check if the response is a valid JSON
-	if !reqx.IsResponseOk(response, err) {
-		return nil, models.EmptyJsonResponse, s.fetchMetadataErr(normalizedURL, err)
-	}
-	// TaskOf the JSON string response
-	metadataResponse := gjson.Parse(response.String())
-
+func (s *pephopFetcher) ExtractMetadata(normalizedURL string, characterID string, metadataResponse gjson.Result) (*models.CardInfo, error) {
 	// Retrieve the real card name
 	cardName := metadataResponse.Get(character.NameField).String()
 	// Retrieve creator
@@ -79,13 +70,13 @@ func (s *pephopFetcher) FetchMetadata(normalizedURL string, characterID string) 
 	updateTime := s.fromDate(pepHopDateFormat, metadataResponse.Get("updated_at").String(), normalizedURL)
 	createTime := s.fromDate(pepHopDateFormat, metadataResponse.Get("created_at").String(), normalizedURL)
 
-	metadata := &models.Metadata{
+	metadata := &models.CardInfo{
 		Source:         s.sourceID,
-		CardURL:        normalizedURL,
+		NormalizedURL:  normalizedURL,
 		PlatformID:     characterID,
 		CharacterID:    characterID,
-		CardName:       cardName,
-		CharacterName:  cardName,
+		Title:          cardName,
+		Name:           cardName,
 		Creator:        creator,
 		Tagline:        tagline,
 		CreateTime:     createTime,
@@ -94,14 +85,11 @@ func (s *pephopFetcher) FetchMetadata(normalizedURL string, characterID string) 
 		Tags:           tags,
 	}
 
-	fullResponse := models.JsonResponse{
-		Metadata: metadataResponse,
-	}
-	return metadata, fullResponse, nil
+	return metadata, nil
 }
 
 // FetchPngCard - Retrieve card for given url
-func (s *pephopFetcher) FetchCharacterCard(metadata *models.Metadata, response models.JsonResponse) (*png.CharacterCard, error) {
+func (s *pephopFetcher) FetchCharacterCard(normalizedURL string, characterID string, response models.JsonResponse) (*png.CharacterCard, error) {
 	metadataResponse := response.Metadata
 	// Download avatar and transform to PNG
 	pepHopAvatarURL := fmt.Sprintf(pephopAvatarURL, metadataResponse.Get("avatar").String())
@@ -133,12 +121,8 @@ func (s *pephopFetcher) FetchCharacterCard(metadata *models.Metadata, response m
 	// Assemble CreatorNotes using description/introduction from the json response
 	// Tagline for PepHop is the original creator notes
 	// Retrieve the character introduction
-	creatorNotesIntroduction := metadataResponse.Get("introduction.characterIntroduction").String()
 	// Assign the assembled creator notes
-	sheet.Data.CreatorNotes = stringsx.JoinNonBlank(
-		character.CreatorNotesSeparator,
-		metadata.Tagline, creatorNotesIntroduction,
-	)
+	sheet.Data.CreatorNotes = metadataResponse.Get("introduction.characterIntroduction").String()
 
 	// Return the parsed PNG sheet
 	return characterCard, nil
@@ -147,5 +131,5 @@ func (s *pephopFetcher) FetchCharacterCard(metadata *models.Metadata, response m
 // CharacterID - returns the characterID for pephop source
 // For PepHop the suffix must be trimmed to leave just the real Slug
 func (s *pephopFetcher) CharacterID(url string, matchedURL string) string {
-	return s.BaseFetcher.CharacterID(url, matchedURL)[0:pephopUuidLength]
+	return s.BaseHandler.CharacterID(url, matchedURL)[0:pephopUuidLength]
 }

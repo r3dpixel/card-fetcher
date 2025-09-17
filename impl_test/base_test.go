@@ -45,7 +45,7 @@ const (
 	TestCardDepthPromptLevel          = 4
 )
 
-var testClient = reqx.NewRetryClient(reqx.ClientOptions{
+var testClient = reqx.NewRetryClient(reqx.Options{
 	RetryCount:    4,
 	MinBackoff:    10 * time.Millisecond,
 	MaxBackoff:    500 * time.Millisecond,
@@ -67,46 +67,46 @@ func assertCommonFields(
 	version character.Version,
 ) {
 	assert.Equal(t, source, metadata.Source)
-	assert.Equal(t, normalizedUrl, metadata.CardURL)
+	assert.Equal(t, normalizedUrl, metadata.NormalizedURL)
 	assert.Equal(t, TestCardTags, len(metadata.Tags))
 	assert.Equal(t, TestCardTag, metadata.Tags[0].Name)
-	assert.Equal(t, creator, metadata.Creator)
-	assert.Equal(t, TestCardName, metadata.CardName)
+	assert.Equal(t, creator, metadata.CreatorInfo.Nickname)
+	assert.Equal(t, TestCardName, metadata.Title)
 
 	assert.Equal(t, spec, jsonCard.Spec)
 	assert.Equal(t, version, jsonCard.Version)
-	assert.Equal(t, TestCardName, jsonCard.Data.CardName)
-	assert.Equal(t, TestCardChatName, jsonCard.Data.CharacterName)
-	assert.Equal(t, description, jsonCard.Data.Description)
-	assert.Equal(t, personality, jsonCard.Data.Personality)
-	assert.Equal(t, TestCardScenario, jsonCard.Data.Scenario)
-	assert.Equal(t, TestCardFirstMessage, jsonCard.Data.FirstMessage)
-	assert.Equal(t, TestCardMessageExamples, jsonCard.Data.MessageExamples)
-	assert.Equal(t, creatorNotes, jsonCard.Data.CreatorNotes)
-	assert.Equal(t, systemPrompt, jsonCard.Data.SystemPrompt)
-	assert.Equal(t, TestCardPostHistoryInstructions, jsonCard.Data.PostHistoryInstructions)
-	assert.Equal(t, TestCardAlternateGreetings, len(jsonCard.Data.AlternateGreetings))
-	assert.Equal(t, TestCardAlternateGreeting, jsonCard.Data.AlternateGreetings[0])
-	assert.Equal(t, TestCardTags, len(jsonCard.Data.Tags))
-	assert.Equal(t, TestCardTag, jsonCard.Data.Tags[0])
-	assert.Equal(t, characterVersion, jsonCard.Data.CharacterVersion)
-	assert.Equal(t, creator, jsonCard.Data.Creator)
+	assert.Equal(t, TestCardName, jsonCard.Content.Title)
+	assert.Equal(t, TestCardChatName, jsonCard.Content.Name)
+	assert.Equal(t, description, jsonCard.Content.Description)
+	assert.Equal(t, personality, jsonCard.Content.Personality)
+	assert.Equal(t, TestCardScenario, jsonCard.Content.Scenario)
+	assert.Equal(t, TestCardFirstMessage, jsonCard.Content.FirstMessage)
+	assert.Equal(t, TestCardMessageExamples, jsonCard.Content.MessageExamples)
+	assert.Equal(t, creatorNotes, jsonCard.Content.CreatorNotes)
+	assert.Equal(t, systemPrompt, jsonCard.Content.SystemPrompt)
+	assert.Equal(t, TestCardPostHistoryInstructions, jsonCard.Content.PostHistoryInstructions)
+	assert.Equal(t, TestCardAlternateGreetings, len(jsonCard.Content.AlternateGreetings))
+	assert.Equal(t, TestCardAlternateGreeting, jsonCard.Content.AlternateGreetings[0])
+	assert.Equal(t, TestCardTags, len(jsonCard.Content.Tags))
+	assert.Equal(t, TestCardTag, jsonCard.Content.Tags[0])
+	assert.Equal(t, characterVersion, jsonCard.Content.CharacterVersion)
+	assert.Equal(t, creator, jsonCard.Content.Creator)
 }
 
 func assertCharacterLoreBookCommonFields(t *testing.T, jsonCard *character.Sheet) {
-	assert.Equal(t, TestCardLoreBookName, *jsonCard.Data.CharacterBook.Name)
-	assert.Equal(t, TestCardLoreBookEntries, len(jsonCard.Data.CharacterBook.Entries))
-	assert.Equal(t, TestCardLoreBookDescription, *jsonCard.Data.CharacterBook.Description)
-	assert.Equal(t, TestCardLoreBookEntryName, *jsonCard.Data.CharacterBook.Entries[0].Name)
-	assert.Equal(t, TestCardLoreBookEntryContent, jsonCard.Data.CharacterBook.Entries[0].Content)
-	assert.Equal(t, TestCardLorebookEntryKeys, len(jsonCard.Data.CharacterBook.Entries[0].Keys))
-	assert.Equal(t, TestCardLoreBookEntryPrimaryKey, jsonCard.Data.CharacterBook.Entries[0].Keys[0])
-	assert.Equal(t, TestCardLorebookEntryKeys, len(jsonCard.Data.CharacterBook.Entries[0].SecondaryKeys))
-	assert.Equal(t, TestCardLoreBookEntrySecondaryKey, jsonCard.Data.CharacterBook.Entries[0].SecondaryKeys[0])
+	assert.Equal(t, TestCardLoreBookName, *jsonCard.Content.CharacterBook.Name)
+	assert.Equal(t, TestCardLoreBookEntries, len(jsonCard.Content.CharacterBook.Entries))
+	assert.Equal(t, TestCardLoreBookDescription, *jsonCard.Content.CharacterBook.Description)
+	assert.Equal(t, TestCardLoreBookEntryName, *jsonCard.Content.CharacterBook.Entries[0].Name)
+	assert.Equal(t, TestCardLoreBookEntryContent, jsonCard.Content.CharacterBook.Entries[0].Content)
+	assert.Equal(t, TestCardLorebookEntryKeys, len(jsonCard.Content.CharacterBook.Entries[0].Keys))
+	assert.Equal(t, TestCardLoreBookEntryPrimaryKey, jsonCard.Content.CharacterBook.Entries[0].Keys[0])
+	assert.Equal(t, TestCardLorebookEntryKeys, len(jsonCard.Content.CharacterBook.Entries[0].SecondaryKeys))
+	assert.Equal(t, TestCardLoreBookEntrySecondaryKey, jsonCard.Content.CharacterBook.Entries[0].SecondaryKeys[0])
 }
 
 func assertDepthPrompt(t *testing.T, jsonCard *character.Sheet) {
-	depthPrompt := jsonCard.Data.DepthPrompt
+	depthPrompt := jsonCard.Content.DepthPrompt
 	assert.Equal(t, TestCardDepthPromptContent, depthPrompt.Prompt)
 	assert.Equal(t, TestCardDepthPromptLevel, depthPrompt.Depth)
 }
@@ -123,15 +123,15 @@ func assertImage(t *testing.T, context *png.CharacterCard) {
 
 func assertConsistency(t *testing.T, metadata *models.Metadata, context *png.CharacterCard) {
 	stringTags := models.TagsToNames(metadata.Tags)
-	assert.Equal(t, stringTags, context.Sheet.Data.Tags)
-	assert.Equal(t, metadata.CharacterName, context.Sheet.Data.CharacterName)
-	assert.Equal(t, metadata.Creator, context.Sheet.Data.Creator)
-	assert.Equal(t, timestamp.Convert[timestamp.Seconds](metadata.CreateTime), context.Sheet.Data.CreationDate)
-	assert.Equal(t, timestamp.Convert[timestamp.Seconds](metadata.LatestUpdateTime()), context.Sheet.Data.ModificationDate)
-	assert.Equal(t, metadata.CardName, context.Sheet.Data.CardName)
-	assert.NotEmpty(t, context.Sheet.Data.Nickname)
+	assert.Equal(t, stringTags, context.Sheet.Content.Tags)
+	assert.Equal(t, metadata.Name, context.Sheet.Content.Name)
+	assert.Equal(t, metadata.CreatorInfo.Nickname, context.Sheet.Content.Creator)
+	assert.Equal(t, timestamp.Convert[timestamp.Seconds](metadata.CreateTime), context.Sheet.Content.CreationDate)
+	assert.Equal(t, timestamp.Convert[timestamp.Seconds](metadata.LatestUpdateTime()), context.Sheet.Content.ModificationDate)
+	assert.Equal(t, metadata.Title, context.Sheet.Content.Title)
+	assert.NotEmpty(t, context.Sheet.Content.Nickname)
 }
 
-func assertSourceIsUp(t *testing.T, fetcher fetcher.Fetcher) {
-	assert.True(t, fetcher.IsSourceUp(testClient))
+func assertSourceIsUp(t *testing.T, fetcher fetcher.SourceHandler) {
+	assert.True(t, fetcher.IsSourceUp())
 }

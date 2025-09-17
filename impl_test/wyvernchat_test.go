@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/r3dpixel/card-fetcher/fetcher"
-	"github.com/r3dpixel/card-fetcher/postprocessor"
+	"github.com/r3dpixel/card-fetcher/impl"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-fetcher/task"
 	"github.com/r3dpixel/card-parser/character"
@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testWyvernFetcher = postprocessor.New(fetcher.NewWyvernChatFetcher())
+var testWyvernFetcher = fetcher.New(impl.WyvernChatHandler(testClient))
 
 func TestWyvernFetcher(t *testing.T) {
 	assertSourceIsUp(t, testWyvernFetcher)
@@ -24,7 +24,7 @@ func TestWyvernChatImport(t *testing.T) {
 
 	const creator = "WindWave"
 	url := "https://app.wyvern.chat/characters/_wA7KG6rCcfHTFrpD3XLJ8"
-	fetcherTask := task.New(testClient, testWyvernFetcher, url, testWyvernFetcher.MainURL())
+	fetcherTask := task.New(testWyvernFetcher, url, testWyvernFetcher.MainURL())
 	metadata, err := fetcherTask.FetchMetadata()
 	assert.NoError(t, err)
 	card, err := fetcherTask.FetchCharacterCard()
@@ -34,10 +34,10 @@ func TestWyvernChatImport(t *testing.T) {
 	metadata, err = fetcherTask.FetchMetadata()
 	assert.NoError(t, err)
 
-	assert.Equal(t, "wyvern.chat/characters/_wA7KG6rCcfHTFrpD3XLJ8", metadata.CardURL)
+	assert.Equal(t, "wyvern.chat/characters/_wA7KG6rCcfHTFrpD3XLJ8", metadata.CardInfo.NormalizedURL)
 	assert.Equal(t, "_wA7KG6rCcfHTFrpD3XLJ8", metadata.CharacterID)
-	assert.Equal(t, "wA7KG6rCcfHTFrpD3XLJ8", metadata.PlatformID)
-	assert.Equal(t, TestCardLoreBookEntryComment, *jsonSheet.Data.CharacterBook.Entries[0].Comment)
+	assert.Equal(t, "wA7KG6rCcfHTFrpD3XLJ8", metadata.CardInfo.PlatformID)
+	assert.Equal(t, TestCardLoreBookEntryComment, *jsonSheet.Content.CharacterBook.Entries[0].Comment)
 
 	assertConsistency(t, metadata, card)
 	assertCommonFields(t,
@@ -64,7 +64,7 @@ func TestWyvernChatImport_MultiLoreBook(t *testing.T) {
 
 	const creator = "Ultimate"
 	url := "https://app.wyvern.chat/characters/_MBnL8cfMUVNFVTBe4GNm4"
-	fetcherTask := task.New(testClient, testWyvernFetcher, url, testWyvernFetcher.MainURL())
+	fetcherTask := task.New(testWyvernFetcher, url, testWyvernFetcher.MainURL())
 	metadata, err := fetcherTask.FetchMetadata()
 	assert.NoError(t, err)
 	card, err := fetcherTask.FetchCharacterCard()
@@ -74,14 +74,14 @@ func TestWyvernChatImport_MultiLoreBook(t *testing.T) {
 	metadata, err = fetcherTask.FetchMetadata()
 	assert.NoError(t, err)
 
-	assert.Equal(t, jsonSheet.Data.CharacterBook.GetName(), "Arvath Dungeon Lore -- Arcaea Lore")
-	assert.Contains(t, jsonSheet.Data.CharacterBook.GetDescription(), "----------------------")
-	assert.True(t, strings.HasPrefix(jsonSheet.Data.CharacterBook.GetDescription(), "Information for Arvath Dungeon, a dungeon with five levels set in the Arcaea region of my fantasy world."))
-	assert.Len(t, jsonSheet.Data.CharacterBook.Entries, 38)
-	assert.Equal(t, "wyvern.chat/characters/_MBnL8cfMUVNFVTBe4GNm4", metadata.CardURL)
+	assert.Equal(t, jsonSheet.Content.CharacterBook.GetName(), "Arvath Dungeon Lore -- Arcaea Lore")
+	assert.Contains(t, jsonSheet.Content.CharacterBook.GetDescription(), "----------------------")
+	assert.True(t, strings.HasPrefix(jsonSheet.Content.CharacterBook.GetDescription(), "Information for Arvath Dungeon, a dungeon with five levels set in the Arcaea region of my fantasy world."))
+	assert.Len(t, jsonSheet.Content.CharacterBook.Entries, 38)
+	assert.Equal(t, "wyvern.chat/characters/_MBnL8cfMUVNFVTBe4GNm4", metadata.NormalizedURL)
 	assert.Equal(t, "app.wyvern.chat/characters/_MBnL8cfMUVNFVTBe4GNm4", metadata.DirectURL)
 	assert.Equal(t, "_MBnL8cfMUVNFVTBe4GNm4", metadata.CharacterID)
-	assert.Equal(t, "MBnL8cfMUVNFVTBe4GNm4", metadata.PlatformID)
+	assert.Equal(t, "MBnL8cfMUVNFVTBe4GNm4", metadata.CardInfo.PlatformID)
 
 	assertConsistency(t, metadata, card)
 

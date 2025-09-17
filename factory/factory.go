@@ -3,12 +3,12 @@ package factory
 import (
 	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
-	"github.com/r3dpixel/card-fetcher/postprocessor"
+	"github.com/r3dpixel/card-fetcher/impl"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/toolkit/cred"
 )
 
-type FactoryOptions struct {
+type Options struct {
 	Client                    *req.Client
 	PygmalionIdentityProvider cred.IdentityReader
 }
@@ -21,36 +21,36 @@ type factory struct {
 	pygmalionIdentityProvider cred.IdentityReader
 }
 
-func New(opts FactoryOptions) Factory {
+func New(opts Options) Factory {
 	return &factory{
 		client:                    opts.Client,
 		pygmalionIdentityProvider: opts.PygmalionIdentityProvider,
 	}
 }
 
-func (f *factory) implementationOf(sourceID source.ID) fetcher.Fetcher {
+func (f *factory) implementationOf(sourceID source.ID) fetcher.SourceHandler {
 	switch sourceID {
 	case source.CharacterTavern:
-		return fetcher.NewCharacterTavernFetcher(f.client)
+		return impl.NewCharacterTavernFetcher(f.client)
 	case source.ChubAI:
-		return fetcher.NewChubAIFetcher(f.client)
+		return impl.NewChubAIFetcher(f.client)
 	case source.NyaiMe:
-		return fetcher.NewNyaiMeFetcher(f.client)
+		return impl.NewNyaiMeFetcher(f.client)
 	case source.PepHop:
-		return fetcher.NewPephopFetcher(f.client)
+		return impl.NewPephopFetcher(f.client)
 	case source.Pygmalion:
-		return fetcher.NewPygmalionFetcher(f.client, f.pygmalionIdentityProvider)
+		return impl.NewPygmalionFetcher(f.client, f.pygmalionIdentityProvider)
 	case source.WyvernChat:
-		return fetcher.NewWyvernChatFetcher(f.client)
+		return impl.WyvernChatHandler(f.client)
 	default:
 		return nil
 	}
 }
 
 func (f *factory) FetcherOf(sourceID source.ID) fetcher.Fetcher {
-	simpleFetcher := f.implementationOf(sourceID)
-	if simpleFetcher == nil {
+	sourceHandler := f.implementationOf(sourceID)
+	if sourceHandler == nil {
 		return nil
 	}
-	return postprocessor.New(simpleFetcher)
+	return fetcher.New(sourceHandler)
 }

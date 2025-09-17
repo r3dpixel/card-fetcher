@@ -20,7 +20,7 @@ var StandardTags = map[Slug]string{
 	"cnc":                                 "Consensual Non-Consent",
 	"cbt":                                 "Cock And Ball Torture",
 	"watersports":                         "Water Sports",
-	"featuredcreator":                     "Featured Creator",
+	"featuredcreator":                     "Featured CreatorInfo",
 	"vtuber":                              "VTuber",
 	"wellintentionedextremist":            "Well Intentioned Extremist",
 	"parentplay":                          "Parent Play",
