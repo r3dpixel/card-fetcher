@@ -204,7 +204,7 @@ func (s *chubAIFetcher) updateFieldsWithFallback(characterCard *png.CharacterCar
 	if err != nil {
 		return err
 	}
-	characterCard.AlternateGreetings = slicesx.Merge(alternateGreetings, characterCard.AlternateGreetings)
+	characterCard.AlternateGreetings = slicesx.MergeStable(alternateGreetings, characterCard.AlternateGreetings)
 	return nil
 }
 

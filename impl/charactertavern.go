@@ -138,7 +138,7 @@ func (s *characterTavernFetcher) FetchCharacterCard(binder *fetcher.Binder) (*pn
 		return nil, err
 	}
 
-	sheet.AlternateGreetings = slicesx.Merge(sheet.AlternateGreetings, greetings)
+	sheet.AlternateGreetings = slicesx.MergeStable(greetings, sheet.AlternateGreetings)
 
 	// Return the parsed PNG sheet
 	return characterCard, nil

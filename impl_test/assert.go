@@ -364,18 +364,14 @@ func (ca *CharacterAssertion) SheetTagContains(expectedTags ...string) *Characte
 }
 
 func (ca *CharacterAssertion) TagNames(expectedTags ...string) *CharacterAssertion {
-	slices.Sort(expectedTags)
 	metadataTags := models.TagsToNames(ca.metadata.Tags)
-	slices.Sort(metadataTags)
-	assert.Equal(ca.t, expectedTags, metadataTags, "Metadata tag names mismatch")
+	assert.ElementsMatch(ca.t, expectedTags, metadataTags, "Metadata tag names mismatch")
 	return ca
 }
 
 func (ca *CharacterAssertion) SheetTagNames(expectedTags ...string) *CharacterAssertion {
-	slices.Sort(expectedTags)
 	sheetTags := slices.Clone(ca.sheet.Tags)
-	slices.Sort(sheetTags)
-	assert.Equal(ca.t, expectedTags, []string(sheetTags), "Sheet tag names mismatch")
+	assert.ElementsMatch(ca.t, expectedTags, []string(sheetTags), "Sheet tag names mismatch")
 	return ca
 }
 
