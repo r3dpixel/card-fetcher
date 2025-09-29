@@ -17,6 +17,7 @@ import (
 type Task interface {
 	SourceID() source.ID
 	NormalizedURL() string
+	OriginalURL() string
 	FetchMetadata() (*models.Metadata, error)
 	FetchCharacterCard() (*png.CharacterCard, error)
 	FetchAll() (*models.Metadata, *png.CharacterCard, error)
@@ -27,6 +28,7 @@ type task struct {
 	fetchCharacterCard func() (*png.CharacterCard, error)
 
 	sourceID      source.ID
+	originalURL   string
 	normalizedURL string
 	characterID   string
 }
@@ -48,16 +50,22 @@ func New(f fetcher.Fetcher, url string, matchedURL string) Task {
 	})
 
 	return &task{
-		sourceID:           f.SourceID(),
-		characterID:        characterID,
-		normalizedURL:      normalizedURL,
 		fetchMetadata:      metadataFlow,
 		fetchCharacterCard: characterCardFlow,
+
+		sourceID:      f.SourceID(),
+		originalURL:   url,
+		normalizedURL: normalizedURL,
+		characterID:   characterID,
 	}
 }
 
 func (t *task) SourceID() source.ID {
 	return t.sourceID
+}
+
+func (t *task) OriginalURL() string {
+	return t.originalURL
 }
 
 func (t *task) NormalizedURL() string {
