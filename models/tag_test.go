@@ -5,8 +5,10 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
+	"github.com/r3dpixel/toolkit/sonicx"
 	"github.com/stretchr/testify/assert"
-	"github.com/tidwall/gjson"
 )
 
 func TestSanitizeSlug(t *testing.T) {
@@ -46,9 +48,10 @@ func TestSanitizeName(t *testing.T) {
 		{"Simple lowercase", "tag", "Tag"},
 		{"Already titled", "Tag Name", "Tag Name"},
 		{"With extra spaces", "  my tag  ", "My Tag"},
-		{"With non-ASCII", "ta ★g1", "Ta G1"},
+		{"With non-ASCII", "ta ★g1", "Ta  G1"},
 		{"With symbols for capitalization", "a-b/c,d", "A-B/C,D"},
-		{"Complex string", "Rand st★rin★g,/- sh★ou★ld be cap", "Rand String,/- Should Be Cap"},
+		{"Complex string", "Rand st★rin★g,/- sh★ou★ld be cap", "Rand St Rin G,/- Sh Ou Ld Be Cap"},
+		{"Trim space string", "   Rand st★rin★g,/- sh★ou★ld be cap   ", "Rand St Rin G,/- Sh Ou Ld Be Cap"},
 	}
 
 	for _, tc := range testCases {
@@ -141,79 +144,17 @@ func TestTagsFromMap(t *testing.T) {
 	}
 }
 
-func TestMergeTags(t *testing.T) {
-	testCases := []struct {
-		name               string
-		dbTags             []Tag
-		stringTags         []string
-		expectedMergedTags []Tag
-		expectedStringTags []string
-	}{
-		{
-			name:               "Both nil",
-			dbTags:             nil,
-			stringTags:         nil,
-			expectedMergedTags: []Tag{},
-			expectedStringTags: []string{},
-		},
-		{
-			name:               "No overlap",
-			dbTags:             []Tag{{Slug: "db1", Name: "Db One"}},
-			stringTags:         []string{"string1"},
-			expectedMergedTags: []Tag{{Slug: "db1", Name: "Db One"}, {Slug: "string1", Name: "String1"}},
-			expectedStringTags: []string{"Db One", "String1"},
-		},
-		{
-			name:               "With overlap and sanitization",
-			dbTags:             []Tag{{Slug: "tag1", Name: "Tag One"}},
-			stringTags:         []string{" T A G - 1 "}, // Should merge into the same slug
-			expectedMergedTags: []Tag{{Slug: "tag1", Name: "T A G - 1"}},
-			expectedStringTags: []string{"T A G - 1"},
-		},
-		{
-			name:               "Empty string tags should be ignored",
-			dbTags:             []Tag{{Slug: "tag1", Name: "Tag One"}},
-			stringTags:         []string{"", "  "},
-			expectedMergedTags: []Tag{{Slug: "tag1", Name: "Tag One"}},
-			expectedStringTags: []string{"Tag One"},
-		},
-		{
-			name: "Complex merge",
-			dbTags: []Tag{
-				{Slug: "tag1", Name: "Tag One"},
-				{Slug: "tag2", Name: "Tag Two"},
-			},
-			stringTags: []string{"tag2", "tag3", "T A G 4"},
-			expectedMergedTags: []Tag{
-				{Slug: "tag1", Name: "Tag One"},
-				{Slug: "tag2", Name: "Tag2"},
-				{Slug: "tag3", Name: "Tag3"},
-				{Slug: "tag4", Name: "T A G 4"},
-			},
-			expectedStringTags: []string{"Tag One", "Tag2", "Tag3", "T A G 4"},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			mergedTags, mergedStringTags := MergeTags(tc.dbTags, tc.stringTags)
-			assert.Equal(t, tc.expectedMergedTags, mergedTags)
-			assert.Equal(t, tc.expectedStringTags, mergedStringTags)
-		})
-	}
-}
-
 func TestTagsFromJsonArray(t *testing.T) {
 	testCases := []struct {
 		name      string
 		jsonInput string
-		extractor func(gjson.Result) string
+		extractor func(node *ast.Node) string
 		expected  []Tag
 	}{
 		{
 			name:      "Simple string array",
 			jsonInput: `["tag1", "T A G 2", "★tag3"]`,
-			extractor: func(r gjson.Result) string { return r.String() },
+			extractor: sonicx.String,
 			expected: []Tag{
 				{Slug: "tag1", Name: "Tag1"},
 				{Slug: "tag2", Name: "T A G 2"},
@@ -223,7 +164,7 @@ func TestTagsFromJsonArray(t *testing.T) {
 		{
 			name:      "Array of objects",
 			jsonInput: `[{"name": "tag1"}, {"name": "tag2"}]`,
-			extractor: func(r gjson.Result) string { return r.Get("name").String() },
+			extractor: func(r *ast.Node) string { return sonicx.OfPtr(r).Get("name").String() },
 			expected: []Tag{
 				{Slug: "tag1", Name: "Tag1"},
 				{Slug: "tag2", Name: "Tag2"},
@@ -232,13 +173,13 @@ func TestTagsFromJsonArray(t *testing.T) {
 		{
 			name:      "Empty array",
 			jsonInput: `[]`,
-			extractor: func(r gjson.Result) string { return r.String() },
+			extractor: sonicx.String,
 			expected:  nil,
 		},
 		{
 			name:      "Array with blank items to be filtered",
 			jsonInput: `["tag1", "  ", "tag2"]`,
-			extractor: func(r gjson.Result) string { return r.String() },
+			extractor: sonicx.String,
 			expected: []Tag{
 				{Slug: "tag1", Name: "Tag1"},
 				{Slug: "tag2", Name: "Tag2"},
@@ -248,8 +189,8 @@ func TestTagsFromJsonArray(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			jsonArray := gjson.Parse(tc.jsonInput)
-			result := TagsFromJsonArray(jsonArray, tc.extractor)
+			jsonArray, _ := sonic.GetFromString(tc.jsonInput)
+			result := TagsFromJsonArray(&jsonArray, tc.extractor)
 			slices.SortFunc(tc.expected, func(a, b Tag) int { return cmp.Compare(a.Name, b.Name) })
 			assert.Equal(t, tc.expected, result)
 		})

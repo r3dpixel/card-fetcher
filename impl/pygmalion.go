@@ -1,23 +1,24 @@
 package impl
 
 import (
-	"encoding/json/v2"
 	"fmt"
 
+	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/imroc/req/v3"
+	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/character"
 	"github.com/r3dpixel/card-parser/png"
-	"github.com/r3dpixel/card-parser/properties"
+	"github.com/r3dpixel/card-parser/property"
 	"github.com/r3dpixel/toolkit/cred"
-	"github.com/r3dpixel/toolkit/gjsonx"
 	"github.com/r3dpixel/toolkit/reqx"
+	"github.com/r3dpixel/toolkit/sonicx"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/timestamp"
 	"github.com/r3dpixel/toolkit/trace"
 	"github.com/rs/zerolog/log"
-	"github.com/tidwall/gjson"
 )
 
 const (
@@ -45,7 +46,7 @@ type pygmalionFetcher struct {
 }
 
 // NewPygmalionFetcher - Create a new ChubAI source
-func NewPygmalionFetcher(client *req.Client, identityReader cred.IdentityReader) SourceHandler {
+func NewPygmalionFetcher(client *req.Client, identityReader cred.IdentityReader) fetcher.Fetcher {
 	impl := &pygmalionFetcher{
 		identityReader: identityReader,
 		headers: map[string]string{
@@ -62,88 +63,103 @@ func NewPygmalionFetcher(client *req.Client, identityReader cred.IdentityReader)
 			baseURLs:  []string{pygmalionBaseURL},
 		},
 	}
-	impl.authManager = reqx.NewAuthManager(impl.refreshBearerToken)
+	impl.authManager = reqx.NewAuthManager(client, impl.refreshBearerToken)
+	impl.Extends(impl)
 	return impl
 }
 
 func (s *pygmalionFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
-	metadataRequestBody := map[string]string{
-		"characterMetaId": characterID,
-	}
-	requestBodyBytes, _ := json.Marshal(metadataRequestBody)
+	requestBodyBytes, _ := sonicx.Config.Marshal(
+		map[string]string{
+			"characterMetaId": characterID,
+		},
+	)
 	return s.client.R().
 		SetContentType(reqx.JsonApplicationContentType).
 		SetBody(requestBodyBytes).
 		Post(pygmalionApiURL)
 }
 
-// FetchMetadata - Retrieve metadata for given url
-func (s *pygmalionFetcher) ExtractMetadata(normalizedURL string, characterID string, metadataResponse gjson.Result) (*models.CardInfo, error) {
-	// Retrieve the real card name
-	cardName := metadataResponse.Get("character.displayName").String()
-	// Retrieve the character name
-	name := metadataResponse.Get("character.personality.name").String()
-
-	// Retrieve creator
-	creator := metadataResponse.Get("character.owner.displayName").String()
-	// Tagline for Pygmalion is creator notes, which is extracted here from the metadata directly
-	tagline := metadataResponse.Get("character.description").String()
-	// Retrieve the card tags
-	tags := models.TagsFromJsonArray(metadataResponse.Get("character.tags"), gjsonx.Stringifier)
-
-	// Extract the update time and created time (format is in seconds, converted to timestamp.Milli)
-	updateTime := timestamp.Convert[timestamp.Nano](timestamp.Seconds(metadataResponse.Get("character.updatedAt").Int()))
-	createTime := timestamp.Convert[timestamp.Nano](timestamp.Seconds(metadataResponse.Get("character.createdAt").Int()))
-
-	bookResponse := s.retrieveBookData(characterID)
-	bookUpdateTime := timestamp.Nano(0)
-	bookResponse.Get("lorebooks.#.updatedAt").ForEach(func(key, value gjson.Result) bool {
-		bookUpdateTime = max(bookUpdateTime, timestamp.Convert[timestamp.Nano](timestamp.Seconds(value.Int())))
-		return true
-	})
-
-	// Return the metadata
-	metadata := &models.CardInfo{
-		Source:         s.sourceID,
-		NormalizedURL:  normalizedURL,
-		PlatformID:     characterID,
-		CharacterID:    characterID,
-		Title:          cardName,
-		Name:           name,
-		Creator:        creator,
-		Tagline:        tagline,
-		CreateTime:     createTime,
-		UpdateTime:     updateTime,
-		BookUpdateTime: bookUpdateTime,
-		Tags:           tags,
-	}
-
-	fullResponse := models.JsonResponse{
-		Metadata:      metadataResponse,
-		BookResponses: []gjson.Result{bookResponse},
-	}
-	return metadata, nil
+func (s *pygmalionFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+	newCharacterID := metadataResponse.GetByPath("character", "id").String()
+	return s.BaseHandler.CreateBinder(newCharacterID, metadataResponse)
 }
 
-// FetchPngCard - Retrieve card for given url
-func (s *pygmalionFetcher) FetchCharacterCard(normalizedURL string, characterID string, response models.JsonResponse) (*png.CharacterCard, error) {
-	metadataResponse := response.Metadata
-	characterCard, err := s.retrieveCardData(characterID, metadataResponse)
+func (s *pygmalionFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+	characterNode := metadataBinder.Get("character")
+
+	return &models.CardInfo{
+		Source:        s.sourceID,
+		NormalizedURL: metadataBinder.NormalizedURL,
+		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
+		PlatformID:    metadataBinder.CharacterID,
+		CharacterID:   metadataBinder.CharacterID,
+		Title:         characterNode.Get("displayName").String(),
+		Name:          characterNode.GetByPath("personality", "name").String(),
+		Tagline:       characterNode.Get("description").String(),
+		CreateTime:    timestamp.Convert[timestamp.Nano](timestamp.Seconds(characterNode.Get("createdAt").Integer64())),
+		UpdateTime:    timestamp.Convert[timestamp.Nano](timestamp.Seconds(characterNode.Get("updatedAt").Integer64())),
+		Tags:          models.TagsFromJsonArray(&characterNode.Get("tags").Node, sonicx.String),
+	}, nil
+}
+
+func (s *pygmalionFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
+	ownerNode := metadataBinder.GetByPath("character", "owner")
+
+	return &models.CreatorInfo{
+		Nickname:   ownerNode.Get("displayName").String(),
+		Username:   ownerNode.Get("username").String(),
+		PlatformID: ownerNode.Get("id").String(),
+	}, nil
+}
+
+func (s *pygmalionFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
+	bookResponses, err := s.fetchBookResponses(metadataBinder.CharacterID)
+	if err != nil {
+		return nil, err
+	}
+	lorebooksNode := bookResponses.Get("lorebooks")
+	if lorebooksNode.TypeSafe() != ast.V_ARRAY {
+		return &fetcher.EmptyBookBinder, nil
+	}
+	bookArray, err := lorebooksNode.ArrayUseNode()
+	if err != nil {
+		return nil, err
+	}
+	if len(bookArray) == 0 {
+		return &fetcher.EmptyBookBinder, nil
+	}
+
+	parsedResponses := make([]fetcher.JsonResponse, len(bookArray))
+	bookUpdateTime := timestamp.Nano(0)
+	for index, bookResult := range bookArray {
+		bookResponse := sonicx.Of(bookResult)
+		updatedAt := bookResponse.Get("updatedAt").Integer64()
+		parsedResponses[index] = bookResponse
+		bookUpdateTime = max(bookUpdateTime, timestamp.Convert[timestamp.Nano](timestamp.Seconds(updatedAt)))
+	}
+
+	return &fetcher.BookBinder{
+		Responses:  parsedResponses,
+		UpdateTime: bookUpdateTime,
+	}, nil
+}
+
+func (s *pygmalionFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+	characterCard, err := s.fetchCharacterCard(binder)
 	if err != nil {
 		return nil, err
 	}
 
-	// Assign the assembled merged book
-	characterCard.Sheet.Data.CharacterBook = s.getMergedBook(response)
+	characterCard.Sheet.CharacterBook = s.parseBookResponses(binder)
 
-	// Return the parsed PNG card
 	return characterCard, nil
 }
 
-func (s *pygmalionFetcher) retrieveCardData(characterID string, gJsonResponse gjson.Result) (*png.CharacterCard, error) {
+func (s *pygmalionFetcher) fetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
 	// Download avatar and transform to PNG
-	avatarUrl := gJsonResponse.Get("character.avatarUrl").String()
-	rawCard, err := png.FromURL(s.client, avatarUrl).DeepScan().Get()
+	avatarUrl := binder.GetByPath("character", "avatarUrl").String()
+	rawCard, err := png.FromURL(s.client, avatarUrl).LastVersion().Get()
 	if err != nil {
 		return nil, err
 	}
@@ -152,123 +168,78 @@ func (s *pygmalionFetcher) retrieveCardData(characterID string, gJsonResponse gj
 		return nil, err
 	}
 
-	// TaskOf the characterCard card (from Pygmalion export)
-	exportUrl := fmt.Sprintf(pygmalionCardExportURL, characterID)
-	response, err := s.client.R().
-		SetContentType(reqx.JsonApplicationContentType).
-		Get(exportUrl)
-	// Check if the response is a valid JSON (error is treated upstream)
-	if !reqx.IsResponseOk(response, err) {
+	bytes, err := reqx.FetchBody(func() (*req.Response, error) {
+		return s.client.R().
+			SetContentType(reqx.JsonApplicationContentType).
+			Get(fmt.Sprintf(pygmalionCardExportURL, binder.CharacterID))
+	})
+	if err != nil {
 		return nil, err
 	}
-	// Unmarshal Pygmalion export into the characterCard
-	jsonCard := response.Bytes()
+
 	// Optimization to remove the prefix `{character:` and suffix `}` from the byte response without processing
-	characterCard.Sheet, err = character.FromBytes(jsonCard[13 : len(jsonCard)-1])
+	characterCard.Sheet, err = character.FromBytes(bytes[13 : len(bytes)-1])
 	// If the card is nil, then the export failed (error is treated upstream)
 	if err != nil {
 		return nil, err
 	}
-	characterCard.Sheet.Data.CreatorNotes = stringsx.Empty
+	characterCard.Sheet.CreatorNotes = property.String(stringsx.Empty)
 
 	// Return the parsed PNG card
 	return characterCard, nil
 }
 
-func (s *pygmalionFetcher) getMergedBook(response models.JsonResponse) *character.Book {
-	// MergeTags all books (Pygmalion allows linking multiple Books to a character)
-	// Merging in an embedded book is the only option
+func (s *pygmalionFetcher) parseBookResponses(binder *fetcher.Binder) *character.Book {
+
 	bookMerger := character.NewBookMerger()
 
-	for _, bookResponse := range response.BookResponses {
-		// Retrieve books gJson array
-		books := bookResponse.Get("lorebooks").Array()
-		// If there are no books return nil
-		if len(books) == 0 {
+	for _, bookResponse := range binder.Responses {
+		var pygBook pygmalionBook
+		err := sonicx.Config.UnmarshalFromString(bookResponse.Raw(), &pygBook)
+		if err != nil {
+			println(err)
+			log.Warn().Err(err).
+				Str(trace.SOURCE, string(s.sourceID)).
+				Str(trace.URL, binder.DirectURL).
+				Msg("Could not parse book")
 			continue
 		}
-
-		for bookIndex := range books {
-			// Parse book
-			book := books[bookIndex].Map()
-			// Extract name and description
-			bookMerger.AppendNameAndDescription(book["name"].String(), book["description"].String())
-
-			// Parse the book entries
-			entries := book["entries"].Array()
-			for entryIndex := range entries {
-				// Parse the JSON string for the current entry
-				entryJson := entries[entryIndex].Map()
-				entry := character.BookEntry{}
-				// Parse the entry keywords
-				entry.Keys = gjsonx.ArrayToSlice(entryJson["keywords"], stringsx.IsNotBlank, gjsonx.Stringifier)
-				// Parse the entry content
-				entry.Content = entryJson["content"].String()
-				// Parse the entry enabled state
-				entry.Enabled = entryJson["enabled"].Bool()
-				// Parse the entry name (which is under field 'title' in pygmalion)
-				entry.Name = new(string)
-				*entry.Name = entryJson["title"].String()
-				// Parse the entry priority
-				entry.Priority = new(int)
-				*entry.Priority = int(entryJson["priority"].Int())
-				// Parse the entry selective state
-				entry.Selective = new(bool)
-				*entry.Selective = entryJson["selective"].Bool()
-				// Parse the entry constant state (which is under the field 'alwaysPresent' in pygmalion)
-				entry.Constant = new(bool)
-				*entry.Constant = entryJson["alwaysPresent"].Bool()
-				// Parse the entry secondary keywords (which are under the field 'andKeywords' in pygmalion)
-				entry.SecondaryKeys = gjsonx.ArrayToSlice(entryJson["andKeywords"], stringsx.IsNotBlank, gjsonx.Stringifier)
-				// Parse the sentry elective logic
-				//entry.SelectiveLogic = new(properties.SelectiveLogic)
-				_ = json.Unmarshal([]byte(entryJson["selectiveLogic"].String()), &entry.SelectiveLogic)
-				// Parse the entry lore position
-				// which for some reason, in pygmalion it is a bool denoting if the entry if 'before_char'
-				// The absence of this value is treated as false
-				if beforeDescriptionPosition := entryJson["beforeDescription"].Bool(); beforeDescriptionPosition {
-					entry.LorePosition = properties.BeforeCharPosition
-				} else {
-					entry.LorePosition = properties.AfterCharPosition
-				}
-				// Append the current entry into the merged book
-				bookMerger.AppendEntry(&entry)
-			}
-		}
-
+		bookMerger.AppendBook(pygBook.convert())
 	}
 
-	// Return the assembled book
 	return bookMerger.Build()
 }
 
-func (s *pygmalionFetcher) retrieveBookData(characterID string) gjson.Result {
-	// Send GET request for the book (check if response is valid JSON, log error)
-	bookRequestBody := map[string]string{
-		"characterId": characterID,
-	}
-	requestBodyBytes, _ := json.Marshal(bookRequestBody)
-	// Send the POST request for the metadata
-	// Retrieve bearer token
-	response, err := s.authManager.Do(s.client, func(c *req.Client, token string) (*req.Response, error) {
-		return c.R().
-			SetBearerAuthToken(token).
-			SetContentType(reqx.JsonApplicationContentType).
-			SetBody(requestBodyBytes).
-			Post(pygmalionLinkedBookURL)
-	})
+func (s *pygmalionFetcher) fetchBookResponses(characterID string) (fetcher.JsonResponse, error) {
+	requestBodyBytes, _ := sonicx.Config.Marshal(
+		map[string]string{
+			"characterId": characterID,
+		},
+	)
 
-	// Check if the response is a valid JSON
-	if !reqx.IsResponseOk(response, err) {
-		log.Error().Err(err).
-			Str(trace.SOURCE, string(s.sourceID)).
-			Str(trace.URL, pygmalionBaseURL+characterID).
-			Msg("Could not parse book character")
-		return gjsonx.Empty
+	bytes, err := reqx.FetchBody(
+		func() (*req.Response, error) {
+			return s.authManager.Do(
+				func(c *req.Client, token string) (*req.Response, error) {
+					return c.R().
+						SetBearerAuthToken(token).
+						SetContentType(reqx.JsonApplicationContentType).
+						SetBody(requestBodyBytes).
+						Post(pygmalionLinkedBookURL)
+				},
+			)
+		},
+	)
+	if err != nil {
+		return sonicx.Of(sonicx.Empty), err
 	}
 
-	// Return the response as a GJsonResponse
-	return gjson.ParseBytes(response.Bytes())
+	node, err := sonic.GetFromString(stringsx.FromBytes(bytes))
+	if err != nil {
+		return sonicx.Of(sonicx.Empty), err
+	}
+
+	return sonicx.Of(node), nil
 }
 
 func (s *pygmalionFetcher) refreshBearerToken(c *req.Client) (string, error) {
@@ -285,19 +256,83 @@ func (s *pygmalionFetcher) refreshBearerToken(c *req.Client) (string, error) {
 		pygmalionAuthPasswordField: identity.Secret,
 	}
 
-	response, err := c.R().
-		SetContentType("application/x-www-form-urlencoded").
-		SetHeaders(s.headers).
-		SetFormData(credentialsMap).
-		Post(pygmalionAuthURL)
+	response, err := reqx.FetchBody(
+		func() (*req.Response, error) {
+			return c.R().
+				SetContentType("application/x-www-form-urlencoded").
+				SetHeaders(s.headers).
+				SetFormData(credentialsMap).
+				Post(pygmalionAuthURL)
+		},
+	)
+	if err != nil {
+		return stringsx.Empty, err
+	}
+	node, err := sonic.GetFromString(stringsx.FromBytes(response), "result", "id_token")
+	if err != nil {
+		return stringsx.Empty, err
+	}
+	tokenResponse := sonicx.Of(node).String()
 
-	if !reqx.IsResponseOk(response, err) {
-		return stringsx.Empty, trace.Err().
-			Wrap(err).
-			Field(trace.SOURCE, string(s.sourceID)).
-			Field("username", identity.User).
-			Msg("Failed to refresh bearer token")
+	return tokenResponse, nil
+}
+
+type pygmalionBook struct {
+	Name        property.String      `json:"name"`
+	Description property.String      `json:"description"`
+	Entries     []pygmalionBookEntry `json:"entries"`
+}
+
+func (p *pygmalionBook) convert() *character.Book {
+	b := character.DefaultBook()
+	b.Name = p.Name
+	b.Description = p.Description
+	b.Entries = make([]*character.BookEntry, len(p.Entries))
+
+	for index := range p.Entries {
+		b.Entries[index] = p.Entries[index].convert()
 	}
 
-	return gjson.Get(response.String(), "result.id_token").String(), nil
+	return b
+}
+
+type pygmalionBookEntry struct {
+	ID             property.Union          `json:"id"`
+	Title          property.String         `json:"title"`
+	Content        property.String         `json:"content"`
+	Priority       property.Integer        `json:"priority"`
+	Keys           property.StringArray    `json:"keywords"`
+	SecondaryKeys  property.StringArray    `json:"andKeywords"`
+	Constant       property.Bool           `json:"alwaysPresent"`
+	LorePosition   *property.LorePosition  `json:"position"`
+	Role           *property.Role          `json:"role"`
+	Enabled        property.Bool           `json:"enabled"`
+	Selective      property.Bool           `json:"selective"`
+	SelectiveLogic property.SelectiveLogic `json:"selectiveLogic"`
+	Sticky         property.Integer        `json:"sticky"`
+	Cooldown       property.Integer        `json:"cooldown"`
+	Delay          property.Integer        `json:"delay"`
+	Depth          property.Integer        `json:"depth"`
+}
+
+func (p *pygmalionBookEntry) convert() *character.BookEntry {
+	entry := character.DefaultBookEntry()
+	entry.ID = p.ID
+	entry.Name = p.Title
+	entry.Comment = p.Title
+	entry.Content = p.Content
+	entry.InsertionOrder = p.Priority
+	entry.Keys = p.Keys
+	entry.SecondaryKeys = p.SecondaryKeys
+	entry.Constant = p.Constant
+	entry.Extensions.LorePosition.SetIfPropertyPtr(p.LorePosition)
+	entry.Extensions.Role.SetIfPropertyPtr(p.Role)
+	entry.Enabled = p.Enabled
+	entry.Selective = p.Selective
+	entry.Extensions.SelectiveLogic = p.SelectiveLogic
+	entry.Extensions.Sticky = p.Sticky
+	entry.Extensions.Cooldown = p.Cooldown
+	entry.Extensions.Delay = p.Delay
+	entry.Extensions.Depth = p.Depth
+	return entry
 }

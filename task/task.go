@@ -3,12 +3,15 @@ package task
 import (
 	"sync"
 
+	"github.com/bytedance/sonic"
+	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/png"
 	"github.com/r3dpixel/toolkit/reqx"
-	"github.com/r3dpixel/toolkit/trace"
+	"github.com/r3dpixel/toolkit/sonicx"
+	"github.com/r3dpixel/toolkit/stringsx"
 )
 
 type Task interface {
@@ -86,15 +89,17 @@ func executeBinderFlow(
 	characterID,
 	normalizedURL string,
 ) (*fetcher.Binder, error) {
-	metadataResponse, err := f.FetchMetadataResponse(characterID)
-	if !reqx.IsResponseErrOk(metadataResponse, err) {
-		return nil, trace.Err().Wrap(err).Field(trace.URL, f.DirectURL(characterID)).Msg("failed to fetch metadata response")
-	}
-	metadataJSON, err := f.ParseMetadataResponse(metadataResponse)
+	response, err := reqx.FetchBody(
+		func() (*req.Response, error) {
+			return f.FetchMetadataResponse(characterID)
+		},
+	)
+
+	metadataResponse, err := sonic.GetFromString(stringsx.FromBytes(response))
 	if err != nil {
 		return nil, err
 	}
-	metadataBinder, err := f.CreateBinder(characterID, normalizedURL, metadataJSON)
+	metadataBinder, err := f.CreateBinder(characterID, sonicx.Of(metadataResponse))
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +126,9 @@ func executeMetadataFlow(
 	if err != nil {
 		return nil, err
 	}
-	return &models.Metadata{CardInfo: *cardInfo, CreatorInfo: *creatorInfo, BookUpdateTime: binder.UpdateTime}, nil
+	metadata := &models.Metadata{CardInfo: *cardInfo, CreatorInfo: *creatorInfo, BookUpdateTime: binder.UpdateTime}
+	fetcher.PatchMetadata(metadata)
+	return metadata, nil
 }
 
 func executeCharacterCardFlow(
@@ -141,6 +148,6 @@ func executeCharacterCardFlow(
 	if err != nil {
 		return nil, err
 	}
-	f.PatchSheet(characterCard.Sheet, metadata)
+	fetcher.PatchSheet(characterCard.Sheet, metadata)
 	return characterCard, nil
 }

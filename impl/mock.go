@@ -28,36 +28,39 @@ type MockData struct {
 	CharacterCardErr error
 }
 
-type mockHandler struct {
+type mockFetcher struct {
 	BaseHandler
 	MockData MockData
 }
 
-func MockHandler(config MockConfig, mockData MockData) fetcher.SourceHandler {
-	return &mockHandler{
+func NewMockFetcher(config MockConfig, mockData MockData) fetcher.Fetcher {
+	f := &mockFetcher{
 		BaseHandler: BaseHandler{
 			client:    nil,
 			sourceID:  config.MockSourceID,
 			sourceURL: config.MockSourceURL,
-			directURL: config.MockMainURL,
+			directURL: config.MockDirectURL,
+			mainURL:   config.MockMainURL,
 			baseURLs:  append([]string{config.MockMainURL}, config.MockAlternateURLs...),
 		},
 		MockData: mockData,
 	}
+	f.Extends(f)
+	return f
 }
 
-func (m *mockHandler) FetchMetadataResponse(characterID string) (*req.Response, error) {
+func (m *mockFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	return m.MockData.Response, m.MockData.ResponseError
 }
 
-func (m *mockHandler) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+func (m *mockFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
 	return m.MockData.CardInfo, m.MockData.CardInfoErr
 }
 
-func (m *mockHandler) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
+func (m *mockFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
 	return m.MockData.CreatorInfo, m.MockData.CreatorErr
 }
 
-func (m *mockHandler) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+func (m *mockFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
 	return m.MockData.CharacterCard, m.MockData.CharacterCardErr
 }

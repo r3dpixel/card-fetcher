@@ -1,29 +1,30 @@
 package impl
 
 import (
-	"encoding/json/v2"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/elliotchance/orderedmap/v3"
 	"github.com/imroc/req/v3"
+	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/character"
 	"github.com/r3dpixel/card-parser/png"
-	"github.com/r3dpixel/card-parser/properties"
-	"github.com/r3dpixel/toolkit/gjsonx"
+	"github.com/r3dpixel/card-parser/property"
 	"github.com/r3dpixel/toolkit/reqx"
+	"github.com/r3dpixel/toolkit/slicesx"
+	"github.com/r3dpixel/toolkit/sonicx"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/structx"
 	"github.com/r3dpixel/toolkit/symbols"
 	"github.com/r3dpixel/toolkit/timestamp"
 	"github.com/r3dpixel/toolkit/trace"
 	"github.com/rs/zerolog/log"
-	"github.com/tidwall/gjson"
+	"github.com/spf13/cast"
 )
 
 const (
@@ -33,6 +34,7 @@ const (
 	chubApiURL             string = "https://api.chub.ai/api/characters/%s?full=true"         // Public API for retrieving metadata
 	chubApiCardDownloadURL string = "https://avatars.charhub.io/avatars/%s/chara_card_v2.png" // Download NormalizedURL for retrieving card
 	chubApiBookURL         string = "https://api.chub.ai/api/lorebooks/%s?full=true"          // Public API for retrieving books
+	chubApiUsersURL        string = "https://api.chub.ai/api/users/%s"
 
 	chubAiTaglineFieldName string = "node.tagline"   // Tagline field name for ChubAI
 	chubAiDateFormat       string = time.RFC3339Nano // Date Format for ChubAI API
@@ -50,7 +52,7 @@ type chubAIFetcher struct {
 }
 
 // NewChubAIFetcher - Create a new ChubAI source
-func NewChubAIFetcher(client *req.Client) SourceHandler {
+func NewChubAIFetcher(client *req.Client) fetcher.Fetcher {
 	impl := &chubAIFetcher{
 		BaseHandler: BaseHandler{
 			client:    client,
@@ -61,6 +63,7 @@ func NewChubAIFetcher(client *req.Client) SourceHandler {
 			baseURLs:  []string{chubMainURL, chubAlternateURL},
 		},
 	}
+	impl.Extends(impl)
 	return impl
 }
 
@@ -69,148 +72,149 @@ func (s *chubAIFetcher) FetchMetadataResponse(characterID string) (*req.Response
 	return s.client.R().Get(metadataURL)
 }
 
-func (s *chubAIFetcher) ExtractMetadata(normalizedURL string, characterID string, metadataResponse gjson.Result) (*models.CardInfo, error) {
-	// Retrieve the updated characterID (ChubAI allows creators to change username)
-	characterID = metadataResponse.Get("node.fullPath").String()
-	normalizedURL = s.NormalizeURL(characterID)
-
-	// Retrieve the real card name
-	cardName := metadataResponse.Get("node.name").String()
-	// Retrieve the character name
-	name := metadataResponse.Get("node.definition.name").String()
-
-	// For ChubAI characterID is "creator/Title"
-	creator := strings.Split(characterID, `/`)[0]
-	// Tagline for ChubAI is an actual tagline
-	tagline := metadataResponse.Get(chubAiTaglineFieldName).String()
-	// Create and parse card specific tags
-	tags := models.TagsFromJsonArray(metadataResponse.Get("node.topics"), gjsonx.Stringifier)
-
-	// Extract the update time and created time
-	updateTime := s.fromDate(chubAiDateFormat, metadataResponse.Get("node.lastActivityAt").String(), normalizedURL)
-	createTime := s.fromDate(chubAiDateFormat, metadataResponse.Get("node.createdAt").String(), normalizedURL)
-
-	// ChubAI "sometimes" doesn't use the latest version of the linked books,
-	// which means fixing it by manually merging books...
-	bookIDs := gjsonx.ArrayToMap(
-		metadataResponse.Get("node.related_lorebooks"),
-		func(token string) bool {
-			intToken, tokenErr := strconv.Atoi(token)
-			return tokenErr != nil || (tokenErr == nil && intToken >= 0)
-		},
-		gjsonx.Stringifier,
-	)
-
-	linkedBookResponses, linkedBookUpdateTime := s.retrieveLinkedBooks(normalizedURL, bookIDs)
-	auxBookResponses, auxBookUpdateTime := s.retrieveAuxBooks(normalizedURL, metadataResponse, bookIDs)
-
-	metadata := &models.CardInfo{
-		Source:         s.sourceID,
-		NormalizedURL:  normalizedURL,
-		PlatformID:     metadataResponse.Get("node.id").String(),
-		CharacterID:    characterID,
-		Title:          cardName,
-		Name:           name,
-		Tags:           tags,
-		Creator:        creator,
-		Tagline:        tagline,
-		CreateTime:     createTime,
-		UpdateTime:     updateTime,
-		BookUpdateTime: max(linkedBookUpdateTime, auxBookUpdateTime),
-	}
-	fullResponse := models.JsonResponse{
-		Metadata:         metadataResponse,
-		BookResponses:    linkedBookResponses,
-		AuxBookResponses: auxBookResponses,
-	}
-	return metadata, nil
+func (s *chubAIFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+	return s.BaseHandler.CreateBinder(metadataResponse.GetByPath("node", "fullPath").String(), metadataResponse)
 }
 
-// FetchPngCard - Retrieve card for given url
-func (s *chubAIFetcher) FetchCharacterCard(normalizedURL string, characterID string, response models.JsonResponse) (*png.CharacterCard, error) {
-	metadataResponse := response.Metadata
-	chubCardURL := metadataResponse.Get("node.max_res_url").String()
-	backupURL := metadataResponse.Get("node.avatar_url").String()
+func (s *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+	node := metadataBinder.Get("node")
+	definitionNode := node.Get("definition")
+
+	return &models.CardInfo{
+		Source:        s.sourceID,
+		NormalizedURL: metadataBinder.NormalizedURL,
+		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
+		PlatformID:    node.Get("id").String(),
+		CharacterID:   metadataBinder.CharacterID,
+		Name:          definitionNode.Get("name").String(),
+		Title:         node.Get("name").String(),
+		Tagline:       node.Get("tagline").String(),
+		CreateTime:    s.fromDate(chubAiDateFormat, node.Get("createdAt").String(), metadataBinder.NormalizedURL),
+		UpdateTime:    s.fromDate(chubAiDateFormat, node.Get("lastActivityAt").String(), metadataBinder.NormalizedURL),
+		Tags:          models.TagsFromJsonArray(&node.Get("topics").Node, sonicx.String),
+	}, nil
+}
+
+func (s *chubAIFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
+	displayName := strings.Split(metadataBinder.CharacterID, `/`)[0]
+
+	response, err := reqx.FetchBody(func() (*req.Response, error) {
+		return s.client.R().Get(fmt.Sprintf(chubApiUsersURL, displayName))
+	})
+	if err != nil {
+		return nil, err
+	}
+	node, err := sonic.GetFromString(stringsx.FromBytes(response))
+	if err != nil {
+		return nil, err
+	}
+	wrap := sonicx.Of(node)
+
+	return &models.CreatorInfo{
+		Nickname:   wrap.Get("username").String(),
+		Username:   wrap.Get("name").String(),
+		PlatformID: wrap.Get("id").String(),
+	}, nil
+}
+
+func (s *chubAIFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
+	bookIDs := sonicx.ArrayToMap(
+		&metadataBinder.GetByPath("node", "related_lorebooks").Node,
+		func(token string) bool {
+			intToken, tokenErr := cast.ToIntE(token)
+			return tokenErr != nil || (tokenErr == nil && intToken >= 0)
+		},
+		sonicx.String,
+	)
+
+	linkedBookResponses, linkedBookUpdateTime := s.retrieveLinkedBooks(metadataBinder, bookIDs)
+	auxBookResponses, auxBookUpdateTime := s.retrieveAuxBooks(metadataBinder, bookIDs)
+	linkedBookResponses = append(linkedBookResponses, auxBookResponses...)
+
+	return &fetcher.BookBinder{
+		Responses:  linkedBookResponses,
+		UpdateTime: max(linkedBookUpdateTime, auxBookUpdateTime),
+	}, nil
+}
+
+func (s *chubAIFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+	node := binder.Get("node")
+	chubCardURL := node.Get("max_res_url").String()
+	backupURL := node.Get("avatar_url").String()
 
 	characterCard, err := s.retrieveCardData(chubCardURL, backupURL)
 	if err != nil {
 		return nil, err
 	}
-	if characterCard.Sheet == nil {
-		characterCard.Sheet = character.EmptySheet(character.RevisionV2)
-	}
-	sheet := characterCard.Sheet
+	definitionNode := node.Get("definition")
 
-	s.updateFieldsWithFallback(&sheet.Data, response.Metadata, normalizedURL)
-
-	// If there are no related books, no processing needed
-	if response.BookCount() == 0 {
-		// Return the parsed PNG card
-		return characterCard, nil
+	if err := s.updateFieldsWithFallback(characterCard, binder, definitionNode); err != nil {
+		return nil, err
 	}
 
 	merger := character.NewBookMerger()
 
-	embeddedBook := s.parseBookGJson(
-		metadataResponse,
-		normalizedURL,
-		false,
-	)
-
-	if embeddedBook != nil {
-		if stringsx.IsBlankPtr(embeddedBook.Name) {
-			embeddedBook.Name = new(string)
-			*embeddedBook.Name = character.BookNamePlaceholder
+	embeddedBook := character.DefaultBook()
+	if err = sonicx.Config.UnmarshalFromString(definitionNode.Get("embedded_lorebook").Raw(), &embeddedBook); err == nil && embeddedBook != nil {
+		if stringsx.IsBlank(string(embeddedBook.Name)) {
+			embeddedBook.Name = character.BookNamePlaceholder
 		}
 		merger.AppendBook(embeddedBook)
 	}
-	for _, bookResponse := range response.BookResponses {
-		book := s.parseBookGJson(bookResponse, normalizedURL, true)
-		if book != nil {
-			merger.AppendBook(book)
-		}
-	}
-	for _, bookResponse := range response.AuxBookResponses {
-		book := s.parseBookGJson(bookResponse, normalizedURL, true)
-		if book != nil && (embeddedBook == nil || *embeddedBook.Name != *book.Name) {
+
+	for _, bookResponse := range binder.Responses {
+		book := character.DefaultBook()
+		tagline := bookResponse.GetByPath("node", "tagline").String()
+		bookDefinition := bookResponse.GetByPath("node", "definition")
+		chubDescription := bookDefinition.Get("description").String()
+		chubName := bookDefinition.Get("name").String()
+		var descriptionTokens []string
+		if err = sonicx.Config.UnmarshalFromString(bookDefinition.Get("embedded_lorebook").Raw(), &book); err == nil && book != nil {
+			book.Name.SetIf(chubName)
+			switch {
+			case len(book.Entries) == 0:
+				descriptionTokens = []string{string(book.Description)}
+			case chubDescription == string(book.Description):
+				descriptionTokens = []string{tagline, chubDescription}
+			default:
+				descriptionTokens = []string{tagline, chubDescription, string(book.Description)}
+			}
+			book.Description = property.String(stringsx.JoinNonBlank(character.CreatorNotesSeparator, descriptionTokens...))
 			merger.AppendBook(book)
 		}
 	}
 
-	sheet.Data.CharacterBook = merger.Build()
+	characterCard.CharacterBook = merger.Build()
 
 	return characterCard, nil
 }
 
-func (s *chubAIFetcher) updateFieldsWithFallback(data *character.Data, metadataResponse gjson.Result, url string) {
-	stringsx.UpdateIfExists(&data.Description, metadataResponse.Get("node.definition.personality").String())
-	stringsx.UpdateIfExists(&data.Personality, metadataResponse.Get("node.definition.tavern_personality").String())
-	stringsx.UpdateIfExists(&data.Scenario, metadataResponse.Get("node.definition.scenario").String())
-	stringsx.UpdateIfExists(&data.FirstMessage, metadataResponse.Get("node.definition.first_message").String())
-	stringsx.UpdateIfExists(&data.MessageExamples, metadataResponse.Get("node.definition.example_dialogs").String())
-	stringsx.UpdateIfExists(&data.CreatorNotes, metadataResponse.Get("node.definition.description").String())
-	stringsx.UpdateIfExists(&data.SystemPrompt, metadataResponse.Get("node.definition.system_prompt").String())
-	stringsx.UpdateIfExists(&data.PostHistoryInstructions, metadataResponse.Get("node.definition.post_history_instructions").String())
-	var alternateGreetings properties.StringArray
-	err := json.Unmarshal([]byte(metadataResponse.Get("node.definition.alternate_greetings").String()), &alternateGreetings)
+func (s *chubAIFetcher) updateFieldsWithFallback(characterCard *png.CharacterCard, binder *fetcher.Binder, definitionNode fetcher.JsonResponse) error {
+	characterCard.Description.SetIf(definitionNode.Get("personality").String())
+	characterCard.Personality.SetIf(definitionNode.Get("tavern_personality").String())
+	characterCard.Scenario.SetIf(definitionNode.Get("scenario").String())
+	characterCard.FirstMessage.SetIf(definitionNode.Get("first_message").String())
+	characterCard.MessageExamples.SetIf(definitionNode.Get("example_dialogs").String())
+	characterCard.CreatorNotes.SetIf(definitionNode.Get("description").String())
+	characterCard.SystemPrompt.SetIf(definitionNode.Get("system_prompt").String())
+	characterCard.PostHistoryInstructions.SetIf(definitionNode.Get("post_history_instructions").String())
+	var alternateGreetings property.StringArray
+
+	err := sonicx.Config.UnmarshalFromString(definitionNode.Get("alternate_greetings").Raw(), &alternateGreetings)
 	if err != nil {
-		log.Warn().Err(err).
-			Str(trace.SOURCE, string(s.sourceID)).
-			Str(trace.URL, url).
-			Msg("failed to unmarshal alternate greetings")
+		return err
 	}
-	if len(alternateGreetings) > 0 {
-		data.AlternateGreetings = alternateGreetings
-	}
+	characterCard.AlternateGreetings = slicesx.Merge(alternateGreetings, characterCard.AlternateGreetings)
+	return nil
 }
 
 func (s *chubAIFetcher) retrieveCardData(cardURL string, backupURL string) (*png.CharacterCard, error) {
-	rawCard, err := png.FromURL(s.client, cardURL).DeepScan().Get()
+	rawCard, err := png.FromURL(s.client, cardURL).LastVersion().Get()
 	if err != nil {
-		rawCard, err = png.FromURL(s.client, s.fixAvatarURL(cardURL)).DeepScan().Get()
+		rawCard, err = png.FromURL(s.client, s.fixAvatarURL(cardURL)).LastVersion().Get()
 	}
 	if err != nil {
-		rawCard, err = png.FromURL(s.client, backupURL).DeepScan().Get()
+		rawCard, err = png.FromURL(s.client, backupURL).LastVersion().Get()
 	}
 	if err != nil {
 		return nil, err
@@ -219,13 +223,12 @@ func (s *chubAIFetcher) retrieveCardData(cardURL string, backupURL string) (*png
 	return rawCard.Decode()
 }
 
-func (s *chubAIFetcher) retrieveLinkedBooks(metadataURL string, bookIDs *orderedmap.OrderedMap[string, struct{}]) ([]gjson.Result, timestamp.Nano) {
-	var bookResponses []gjson.Result
+func (s *chubAIFetcher) retrieveLinkedBooks(metadataBinder *fetcher.MetadataBinder, bookIDs *orderedmap.OrderedMap[string, struct{}]) ([]fetcher.JsonResponse, timestamp.Nano) {
+	var bookResponses []fetcher.JsonResponse
 	maxBookUpdateTime := timestamp.Nano(0)
 	for bookID := range bookIDs.Keys() {
-		bookGJson, bookUpdateTime, found := s.retrieveBookData(bookID, metadataURL)
-		if found {
-			bookResponses = append(bookResponses, bookGJson)
+		if parsedResponse, bookUpdateTime, found := s.retrieveBookData(metadataBinder, bookID); found {
+			bookResponses = append(bookResponses, parsedResponse)
 			maxBookUpdateTime = max(maxBookUpdateTime, bookUpdateTime)
 		}
 	}
@@ -233,84 +236,63 @@ func (s *chubAIFetcher) retrieveLinkedBooks(metadataURL string, bookIDs *ordered
 	return bookResponses, maxBookUpdateTime
 }
 
-func (s *chubAIFetcher) retrieveAuxBooks(
-	metadataURL string,
-	metadataResponse gjson.Result,
-	bookIDs *orderedmap.OrderedMap[string, struct{}],
-) ([]gjson.Result, timestamp.Nano) {
-	var auxBookResponses []gjson.Result
+func (s *chubAIFetcher) retrieveAuxBooks(metadataBinder *fetcher.MetadataBinder, bookIDs *orderedmap.OrderedMap[string, struct{}]) ([]fetcher.JsonResponse, timestamp.Nano) {
+	var bookResponses []fetcher.JsonResponse
 	maxBookUpdateTime := timestamp.Nano(0)
-	auxSources := metadataResponse.Get("node.description").String() + symbols.Space + metadataResponse.Get("node.tagline").String()
+	auxSources := metadataBinder.GetByPath("node", "description").String() + symbols.Space + metadataBinder.GetByPath("node", "tagline").String()
 	bookURLs := bookRegexp.FindAllStringSubmatch(auxSources, -1)
 	for _, bookURLMatches := range bookURLs {
 		if len(bookURLMatches) <= 1 {
 			continue
 		}
 		bookPath := bookURLMatches[1]
-		for len(bookPath) > 0 {
-			bookGJson, bookUpdateTime, found := s.retrieveBookData(bookPath, metadataURL)
+		for stringsx.IsNotBlank(bookPath) {
+			parsedResponse, bookUpdateTime, found := s.retrieveBookData(metadataBinder, bookPath)
 			if found {
-				bookID := strings.TrimSpace(bookGJson.Get("node.id").String())
+				bookID := strings.TrimSpace(parsedResponse.GetByPath("node", "id").String())
 				if !bookIDs.Has(bookID) {
 					bookIDs.Set(bookID, structx.Empty)
-					auxBookResponses = append(auxBookResponses, bookGJson)
+					bookResponses = append(bookResponses, parsedResponse)
 					maxBookUpdateTime = max(maxBookUpdateTime, bookUpdateTime)
 				}
 				break
 			}
-
-			lastSlash := strings.LastIndex(bookPath, symbols.Slash)
-			lastSlash = max(lastSlash, 0)
+			lastSlash := max(strings.LastIndex(bookPath, symbols.Slash), 0)
 			bookPath = bookPath[:lastSlash]
 		}
 	}
 
-	return auxBookResponses, maxBookUpdateTime
+	return bookResponses, maxBookUpdateTime
 }
 
-func (s *chubAIFetcher) retrieveBookData(bookID string, url string) (gjson.Result, timestamp.Nano, bool) {
-	// Retrieve the book data
-	response, err := s.client.R().
-		SetContentType(reqx.JsonApplicationContentType).
-		Get(fmt.Sprintf(chubApiBookURL, bookID))
-	if !reqx.IsResponseOk(response, err) {
+func (s *chubAIFetcher) retrieveBookData(metadataBinder *fetcher.MetadataBinder, bookID string) (fetcher.JsonResponse, timestamp.Nano, bool) {
+	response, err := reqx.FetchBody(func() (*req.Response, error) {
+		return s.client.R().
+			SetContentType(reqx.JsonApplicationContentType).
+			Get(fmt.Sprintf(chubApiBookURL, bookID))
+	})
+
+	if err != nil {
 		log.Warn().Err(err).
 			Str(trace.SOURCE, string(s.sourceID)).
-			Str(trace.URL, url).
+			Str(trace.URL, metadataBinder.DirectURL).
 			Str("bookID", bookID).
 			Msg("Lorebook unlinked/deleted")
-		return gjsonx.Empty, 0, false
-	}
-	gJson := gjson.Parse(response.String())
-	updateTime := s.fromDate(chubAiDateFormat, gJson.Get("node.lastActivityAt").String(), url)
-	return gJson, updateTime, true
-}
-
-func (s *chubAIFetcher) parseBookGJson(fullResponse gjson.Result, url string, overrideName bool) *character.Book {
-	content := fullResponse.Get("node.definition.embedded_lorebook")
-	if !content.Exists() || content.Type == gjson.Null {
-		return nil
-	}
-	rawJson := content.String()
-	if stringsx.IsBlank(rawJson) {
-		return nil
+		return sonicx.Of(sonicx.Empty), 0, false
 	}
 
-	book := (*character.Book)(nil)
-	err := json.Unmarshal([]byte(rawJson), &book)
+	node, err := sonic.GetFromString(stringsx.FromBytes(response))
 	if err != nil {
-		log.Error().Err(err).
+		log.Warn().Err(err).
 			Str(trace.SOURCE, string(s.sourceID)).
-			Str(trace.URL, url).
+			Str(trace.URL, metadataBinder.DirectURL).
+			Str("bookID", bookID).
 			Msg("Could not parse book")
+		return sonicx.Of(sonicx.Empty), 0, false
 	}
-
-	if overrideName {
-		book.Name = new(string)
-		*book.Name = fullResponse.Get("node.name").String()
-	}
-
-	return book
+	wrap := sonicx.Of(node)
+	updateTime := s.fromDate(chubAiDateFormat, wrap.GetByPath("node", "lastActivityAt").String(), metadataBinder.DirectURL)
+	return wrap, updateTime, true
 }
 
 // getChubIdentifier - Return the chub specific identifier (based on characterID)

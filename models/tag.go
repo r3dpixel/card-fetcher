@@ -7,10 +7,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/r3dpixel/toolkit/gjsonx"
+	"github.com/bytedance/sonic/ast"
+	"github.com/r3dpixel/toolkit/sonicx"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/symbols"
-	"github.com/tidwall/gjson"
 )
 
 type Slug = string
@@ -58,19 +58,14 @@ func TagsFromMap(tags map[Slug]string) []Tag {
 }
 
 // TagsFromJsonArray - given an array GJson result, return a list of tags, extracted from the array
-func TagsFromJsonArray(array gjson.Result, extractor func(gjson.Result) string) []Tag {
-	tags := gjsonx.ArrayToSlice(
+func TagsFromJsonArray(array *ast.Node, extractor func(result *ast.Node) string) []Tag {
+	tags := sonicx.ArrayToSlice(
 		array,
 		func(tag Tag) bool {
 			return stringsx.IsNotBlank(tag.Slug)
 		},
-		func(result gjson.Result) Tag {
-			stringTag := extractor(result)
-			slug := SanitizeSlug(stringTag)
-			return Tag{
-				Slug: slug,
-				Name: SanitizeName(stringTag),
-			}
+		func(result *ast.Node) Tag {
+			return ResolveTag(extractor(result))
 		},
 	)
 
@@ -80,39 +75,6 @@ func TagsFromJsonArray(array gjson.Result, extractor func(gjson.Result) string) 
 
 	// Return the slice of tags extracted
 	return tags
-}
-
-// MergeTags - given a list of db tags and a list of string tags merge the two lists and return the results
-func MergeTags(tags []Tag, stringTags []string) ([]Tag, []string) {
-	capacity := len(tags) + len(stringTags)
-	tagMap := make(map[Slug]string, capacity)
-
-	for _, tag := range tags {
-		if slug := SanitizeSlug(tag.Slug); stringsx.IsNotBlank(slug) {
-			tagMap[slug] = ResolveStandardTag(slug, tag.Name)
-		}
-	}
-	for _, tagName := range stringTags {
-		if slug := SanitizeSlug(tagName); stringsx.IsNotBlank(slug) {
-			tagMap[slug] = ResolveStandardTag(slug, tagName)
-		}
-	}
-
-	mergedTags := make([]Tag, 0, len(tagMap))
-	for slug, name := range tagMap {
-		mergedTags = append(mergedTags, Tag{Slug: slug, Name: name})
-	}
-
-	slices.SortFunc(mergedTags, func(a, b Tag) int {
-		return cmp.Compare(a.Slug, b.Slug)
-	})
-
-	stringNames := make([]string, len(mergedTags))
-	for i, tag := range mergedTags {
-		stringNames[i] = tag.Name
-	}
-
-	return mergedTags, stringNames
 }
 
 // SanitizeSlug - Sanitizes the given tag to be used as a slug (removes non-ASCII, '-', '_', whitespace and lowers all characters)
@@ -130,15 +92,18 @@ func SanitizeName(name string) string {
 	if name == stringsx.Empty {
 		return name
 	}
+	return strings.TrimSpace(processAsciiRemainder(name))
+}
 
+func processAsciiRemainder(input string) string {
 	var result strings.Builder
-	result.Grow(len(name))
+	result.Grow(len(input))
 
 	capitalizeNext := true
-	for i := 0; i < len(name); i++ {
-		b := name[i]
+	for i := 0; i < len(input); i++ {
+		b := input[i]
 		if b >= utf8.RuneSelf {
-			return processUnicodeRemainder(name[i:], capitalizeNext, &result)
+			return processUnicodeRemainder(input[i:], capitalizeNext, &result)
 		}
 
 		if isASCIILetter(b) && capitalizeNext {
@@ -159,6 +124,8 @@ func processUnicodeRemainder(input string, capitalizeNext bool, result *strings.
 	for _, r := range input {
 		isLetter := unicode.IsLetter(r)
 		if r >= utf8.RuneSelf && !isLetter && !unicode.IsNumber(r) {
+			capitalizeNext = true
+			result.WriteByte(symbols.SpaceByte)
 			continue
 		}
 

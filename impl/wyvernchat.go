@@ -1,7 +1,6 @@
 package impl
 
 import (
-	"encoding/json/v2"
 	"fmt"
 	"strings"
 	"time"
@@ -12,12 +11,11 @@ import (
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/character"
 	"github.com/r3dpixel/card-parser/png"
-	"github.com/r3dpixel/toolkit/gjsonx"
+	"github.com/r3dpixel/card-parser/property"
+	"github.com/r3dpixel/toolkit/sonicx"
+	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/symbols"
 	"github.com/r3dpixel/toolkit/timestamp"
-	"github.com/r3dpixel/toolkit/trace"
-	"github.com/rs/zerolog/log"
-	"github.com/tidwall/gjson"
 )
 
 const (
@@ -27,8 +25,7 @@ const (
 	wyvernMainURL string = "wyvern.chat/characters/"               // Main NormalizedURL for WyvernChat
 	wyvernApiURL  string = "https://api.wyvern.chat/characters/%s" // API NormalizedURL for WyvernChat
 
-	wyvernTaglineField string = "tagline"        // Tagline Field for WyvernChat
-	wyvernDateFormat   string = time.RFC3339Nano // Date Format for WyvernChat
+	wyvernDateFormat string = time.RFC3339Nano // Date Format for WyvernChat
 
 	wyvernBookExtensionsField string = "extensions" // Extensions field for WyvernChat Book
 )
@@ -38,7 +35,7 @@ type wyvernChatFetcher struct {
 }
 
 // WyvernChatHandler - Create a new WyvernChat source
-func WyvernChatHandler(client *req.Client) fetcher.SourceHandler {
+func WyvernChatHandler(client *req.Client) fetcher.Fetcher {
 	impl := &wyvernChatFetcher{
 		BaseHandler: BaseHandler{
 			client:    client,
@@ -49,7 +46,7 @@ func WyvernChatHandler(client *req.Client) fetcher.SourceHandler {
 			baseURLs:  []string{wyvernMainURL},
 		},
 	}
-
+	impl.Extends(impl)
 	return impl
 }
 
@@ -58,61 +55,43 @@ func (s *wyvernChatFetcher) FetchMetadataResponse(characterID string) (*req.Resp
 	return s.client.R().Get(metadataUrl)
 }
 
-func (s *wyvernChatFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
-	// Retrieve the real card name
-	cardName := metadataBinder.Get(character.NameField).String()
-	// Retrieve the character name
-	name := metadataBinder.Get("chat_name").String()
-
-	// Tagline for WyvernChat is an actual tagline
-	tagline := strings.TrimSpace(metadataBinder.Get(wyvernTaglineField).String())
-	// Parse tags
-	tags := models.TagsFromJsonArray(metadataBinder.Get(character.TagsField), gjsonx.Stringifier)
-
-	// Extract the update time and created time
-	updateTime := s.fromDate(wyvernDateFormat, metadataBinder.Get("updated_at").String(), metadataBinder.NormalizedURL)
-	createTime := s.fromDate(wyvernDateFormat, metadataBinder.Get("created_at").String(), metadataBinder.NormalizedURL)
-
-	metadata := &models.CardInfo{
-		Source:        s.sourceID,
-		NormalizedURL: metadataBinder.NormalizedURL,
-		PlatformID:    strings.TrimPrefix(metadataBinder.CharacterID, symbols.Underscore),
-		CharacterID:   metadataBinder.CharacterID,
-		Title:         cardName,
-		Name:          name,
-		Tagline:       tagline,
-		CreateTime:    createTime,
-		UpdateTime:    updateTime,
-		Tags:          tags,
-	}
-
-	return metadata, nil
+func (s *wyvernChatFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+	return s.BaseHandler.CreateBinder(metadataResponse.Get("id").String(), metadataResponse)
 }
 
-func (s *wyvernChatFetcher) CreateBinder(characterID string, normalizedURL string, metadataResponse gjson.Result) (*fetcher.MetadataBinder, error) {
-	updatedCharacterID := metadataResponse.Get("id").String()
-	return s.BaseHandler.CreateBinder(
-		updatedCharacterID,
-		s.NormalizeURL(updatedCharacterID),
-		metadataResponse,
-	)
+func (s *wyvernChatFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+	return &models.CardInfo{
+		Source:        s.sourceID,
+		NormalizedURL: metadataBinder.NormalizedURL,
+		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
+		PlatformID:    strings.TrimPrefix(metadataBinder.CharacterID, symbols.Underscore),
+		CharacterID:   metadataBinder.CharacterID,
+		Name:          metadataBinder.Get("chat_name").String(),
+		Title:         metadataBinder.Get("name").String(),
+		Tagline:       metadataBinder.Get("tagline").String(),
+		CreateTime:    s.fromDate(wyvernDateFormat, metadataBinder.Get("created_at").String(), metadataBinder.NormalizedURL),
+		UpdateTime:    s.fromDate(wyvernDateFormat, metadataBinder.Get("updated_at").String(), metadataBinder.NormalizedURL),
+		Tags:          models.TagsFromJsonArray(&metadataBinder.Get("tags").Node, sonicx.String),
+	}, nil
 }
 
 func (s *wyvernChatFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
-	displayName := metadataBinder.Get("creator.displayName").String()
+	creatorNode := metadataBinder.Get("creator")
+	displayName := creatorNode.Get("displayName").String()
 	return &models.CreatorInfo{
 		Nickname:   displayName,
 		Username:   displayName,
-		PlatformID: metadataBinder.Get("creator.id").String(),
+		PlatformID: creatorNode.Get("id").String(),
 	}, nil
 }
 
 func (s *wyvernChatFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
 	bookUpdateTime := timestamp.Nano(0)
-	metadataBinder.Get("lorebooks.#.updated_at").ForEach(func(key, value gjson.Result) bool {
-		bookUpdateTime = max(bookUpdateTime, s.fromDate(wyvernDateFormat, value.String(), metadataBinder.NormalizedURL))
-		return true
-	})
+	lorebooksNode := metadataBinder.Get("lorebooks")
+	array, _ := lorebooksNode.ArrayUseNode()
+	for _, lorebookNode := range array {
+		bookUpdateTime = max(bookUpdateTime, s.fromDate(wyvernDateFormat, sonicx.Of(lorebookNode).Get("updated_at").String(), metadataBinder.NormalizedURL))
+	}
 	return &fetcher.BookBinder{
 		UpdateTime: bookUpdateTime,
 	}, nil
@@ -121,7 +100,7 @@ func (s *wyvernChatFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataB
 func (s *wyvernChatFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
 	avatarURL := binder.Get("avatar").String()
 
-	rawCard, err := png.FromURL(s.client, avatarURL).DeepScan().Get()
+	rawCard, err := png.FromURL(s.client, avatarURL).LastVersion().Get()
 	if err != nil {
 		return nil, err
 	}
@@ -130,54 +109,164 @@ func (s *wyvernChatFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.Cha
 	if err != nil {
 		return nil, err
 	}
-	sheet := characterCard.Sheet
 
-	sheet.Content.Description = binder.Get(character.DescriptionField).String()
-	sheet.Content.Personality = binder.Get(character.PersonalityField).String()
-	sheet.Content.Scenario = binder.Get(character.ScenarioField).String()
-	sheet.Content.FirstMessage = binder.Get(character.FirstMessageField).String()
-	sheet.Content.MessageExamples = binder.Get(character.MessageExamplesField).String()
-	sheet.Content.CreatorNotes = binder.Get(character.CreatorNotesField).String()
-	sheet.Content.SystemPrompt = binder.Get("pre_history_instructions").String()
-	sheet.Content.PostHistoryInstructions = binder.Get(character.PostHistoryInstructionsField).String()
-
-	alternateGreetings := make([]string, 0)
-	for _, greetingResult := range binder.Get(character.AlternateGreetingsField).Array() {
-		alternateGreetings = append(alternateGreetings, greetingResult.String())
+	var wSheet wyvernSheet
+	if err := sonicx.Config.UnmarshalFromString(binder.Raw(), &wSheet); err != nil {
+		return nil, err
 	}
-	sheet.Content.AlternateGreetings = alternateGreetings
+	wSheet.fillIn(characterCard.Sheet)
 
-	prompt := binder.Get("character_note").String()
-	sheet.Content.DepthPrompt = &character.DepthPrompt{
-		Prompt: prompt,
-		Depth:  character.DefaultDepthPromptLevel,
+	return characterCard, nil
+}
+
+type wyvernSheet struct {
+	Description             property.String      `json:"description"`
+	Personality             property.String      `json:"personality"`
+	MessageExamples         property.String      `json:"mes_example"`
+	CreatorNotes            property.String      `json:"creator_notes"`
+	PostHistoryInstructions property.String      `json:"post_history_instructions"`
+	PreHistoryInstructions  property.String      `json:"pre_history_instructions"`
+	FirstMessage            property.String      `json:"first_mes"`
+	AlternateGreetings      property.StringArray `json:"alternate_greetings"`
+	Scenario                property.String      `json:"scenario"`
+	CharacterNote           property.String      `json:"character_note"`
+	SharedInfo              property.String      `json:"shared_info"`
+
+	SecretFields []any             `json:"secretFields"`
+	Secrets      map[string]any    `json:"secrets"`
+	Fields       map[string]any    `json:"fields"`
+	Scripts      map[string]any    `json:"scripts"`
+	Commands     []any             `json:"commands"`
+	Personas     []any             `json:"personas"`
+	Lexicon      []wyvernBookEntry `json:"lexicon"`
+	Lorebooks    []wyvernBook      `json:"lorebooks"`
+}
+
+func (w *wyvernSheet) fillIn(sheet *character.Sheet) {
+	sheet.Description = w.Description
+	sheet.Personality = w.Personality
+	sheet.MessageExamples = w.MessageExamples
+	sheet.CreatorNotes = w.CreatorNotes
+	sheet.PostHistoryInstructions = w.PostHistoryInstructions
+	sheet.SystemPrompt = w.PreHistoryInstructions
+	sheet.FirstMessage = w.FirstMessage
+	sheet.AlternateGreetings = w.AlternateGreetings
+	sheet.Scenario = w.Scenario
+	sheet.Content.DepthPrompt.Prompt = string(w.CharacterNote)
+	sheet.Content.DepthPrompt.Depth = character.DefaultDepth
+
+	sharedInfo := strings.TrimSpace(string(w.SharedInfo))
+	if stringsx.IsNotBlank(sharedInfo) {
+		sheet.GroupGreetings = property.StringArray{sharedInfo}
+		sheet.CreatorNotes = property.String(stringsx.JoinNonBlank(character.CreatorNotesSeparator, string(sheet.CreatorNotes), sharedInfo))
+	}
+
+	sheet.Extensions = make(map[string]any)
+	if len(w.SecretFields) > 0 {
+		sheet.Extensions["wyvern_secret_fields"] = w.SecretFields
+	}
+	if len(w.Secrets) > 0 {
+		sheet.Extensions["wyvern_secrets"] = w.Secrets
+	}
+	if len(w.Scripts) > 0 {
+		sheet.Extensions["wyvern_fields"] = w.Fields
+	}
+	if len(w.Scripts) > 0 {
+		sheet.Extensions["wyvern_scripts"] = w.Scripts
+	}
+	if len(w.Commands) > 0 {
+		sheet.Extensions["wyvern_commands"] = w.Commands
+	}
+	if len(w.Personas) > 0 {
+		sheet.Extensions["wyvern_personas"] = w.Personas
 	}
 
 	bookMerger := character.NewBookMerger()
-
-	books := binder.Get("lorebooks")
-	if !books.Exists() || books.Type == gjson.Null {
-		return characterCard, nil
+	for _, book := range w.Lorebooks {
+		bookMerger.AppendBook(book.convert())
 	}
-
-	books.ForEach(func(_, value gjson.Result) bool {
-		book := (*character.Book)(nil)
-		bookErr := json.Unmarshal([]byte(value.String()), &book)
-
-		if bookErr != nil || book == nil {
-			log.Error().
-				Err(bookErr).
-				Str(trace.SOURCE, string(s.sourceID)).
-				Str(trace.URL, binder.NormalizedURL).
-				Msg("Could not parse book character")
-			return true
-		}
-
-		bookMerger.AppendBook(book)
-		return true
-	})
-
+	for index := range w.Lexicon {
+		bookMerger.AppendEntry(w.Lexicon[index].convert())
+	}
 	sheet.Content.CharacterBook = bookMerger.Build()
+}
 
-	return characterCard, nil
+type wyvernBook struct {
+	Name              property.String   `json:"name"`
+	Description       property.String   `json:"description"`
+	ScanDepth         property.Integer  `json:"scan_depth"`
+	TokenBudget       property.Integer  `json:"token_budget"`
+	RecursiveScanning property.Bool     `json:"recursive_scanning"`
+	Extensions        map[string]any    `json:"extensions"`
+	Entries           []wyvernBookEntry `json:"entries"`
+}
+
+func (w *wyvernBook) convert() *character.Book {
+	book := character.DefaultBook()
+	book.Name = w.Name
+	book.Description = w.Description
+	book.ScanDepth = w.ScanDepth
+	book.TokenBudget = w.TokenBudget
+	book.RecursiveScanning = w.RecursiveScanning
+	book.Extensions = w.Extensions
+	book.Entries = make([]*character.BookEntry, len(w.Entries))
+	for index := range w.Entries {
+		book.Entries[index] = w.Entries[index].convert()
+	}
+	return book
+}
+
+type wyvernBookEntry struct {
+	ID               property.Union           `json:"entry_id"`
+	Keys             property.StringArray     `json:"keys"`
+	Content          property.String          `json:"content"`
+	Extensions       map[string]any           `json:"extensions"`
+	Enabled          property.Bool            `json:"enabled"`
+	CaseSensitive    property.Bool            `json:"case_sensitive"`
+	InsertionOrder   property.Integer         `json:"insertion_order"`
+	Name             property.String          `json:"name"`
+	Priority         property.Integer         `json:"priority"`
+	Comment          property.String          `json:"comment"`
+	SecondaryKeys    property.StringArray     `json:"secondary_keys"`
+	Constant         property.Bool            `json:"constant"`
+	Position         *property.LorePosition   `json:"position"`
+	ScanPersona      property.Bool            `json:"scan_persona"`
+	MatchWholeWords  property.Bool            `json:"whole_words_only"`
+	SelectiveLogic   *property.SelectiveLogic `json:"key_logic"`
+	Delay            property.Integer         `json:"delay"`
+	Sticky           property.Integer         `json:"sticky"`
+	Cooldown         property.Integer         `json:"cooldown"`
+	ActivationChance *property.Float          `json:"activation_chance"`
+	CustomFields     map[string]any           `json:"custom_fields"`
+}
+
+func (w *wyvernBookEntry) convert() *character.BookEntry {
+	entry := character.DefaultBookEntry()
+	entry.ID = w.ID
+	entry.Keys = w.Keys
+	entry.Content = w.Content
+	entry.RawExtensions = w.Extensions
+	entry.Enabled = w.Enabled
+	entry.Extensions.CaseSensitive = w.CaseSensitive
+	entry.Extensions.Depth = w.InsertionOrder
+	entry.Name = w.Name
+	entry.InsertionOrder = w.Priority
+	entry.Comment = w.Comment
+	entry.SecondaryKeys = w.SecondaryKeys
+	entry.Constant = w.Constant
+	entry.Extensions.LorePosition.SetIfPropertyPtr(w.Position)
+	entry.Extensions.MatchWholeWords = w.MatchWholeWords
+	entry.Extensions.SelectiveLogic.SetIfPropertyPtr(w.SelectiveLogic)
+	entry.Extensions.Delay = w.Delay
+	entry.Extensions.Sticky = w.Sticky
+	entry.Extensions.Cooldown = w.Cooldown
+	entry.Extensions.Probability.SetIfPropertyPtr(w.ActivationChance)
+
+	if len(w.CustomFields) > 0 {
+		if entry.RawExtensions == nil {
+			entry.RawExtensions = make(map[string]any)
+		}
+		entry.RawExtensions["wyvern_custom_fields"] = w.CustomFields
+	}
+	return entry
 }

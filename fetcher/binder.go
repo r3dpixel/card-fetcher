@@ -2,7 +2,6 @@ package fetcher
 
 import (
 	"github.com/r3dpixel/toolkit/timestamp"
-	"github.com/tidwall/gjson"
 )
 
 type Binder struct {
@@ -13,11 +12,12 @@ type Binder struct {
 type MetadataBinder struct {
 	CharacterID   string
 	NormalizedURL string
-	gjson.Result
+	DirectURL     string
+	JsonResponse
 }
 
 type BookBinder struct {
-	Responses  []gjson.Result
+	Responses  []JsonResponse
 	UpdateTime timestamp.Nano
 }
 

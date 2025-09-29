@@ -6,24 +6,27 @@ import (
 	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/source"
-	"github.com/r3dpixel/toolkit/gjsonx"
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/timestamp"
 	"github.com/r3dpixel/toolkit/trace"
 	"github.com/rs/zerolog/log"
-	"github.com/tidwall/gjson"
 )
 
 const ()
 
 // BaseHandler - Embeddable struct for creating a new source
 type BaseHandler struct {
+	fetcher.Fetcher
 	client    *req.Client
 	sourceID  source.ID
 	sourceURL string
 	directURL string
 	mainURL   string
 	baseURLs  []string
+}
+
+func (s *BaseHandler) Extends(top fetcher.Fetcher) {
+	s.Fetcher = top
 }
 
 func (s *BaseHandler) SourceID() source.ID {
@@ -52,22 +55,16 @@ func (s *BaseHandler) DirectURL(characterID string) string {
 }
 
 func (s *BaseHandler) NormalizeURL(characterID string) string {
-	return s.mainURL + characterID
+	return s.Fetcher.MainURL() + characterID
 }
 
-func (s *BaseHandler) ParseMetadataResponse(response *req.Response) (gjson.Result, error) {
-	bytes, err := response.ToBytes()
-	if err != nil {
-		return gjsonx.Empty, err
-	}
-	if gjson.ValidBytes(bytes) {
-		return gjsonx.Empty, fetcher.InvalidJsonResponse
-	}
-	return gjson.ParseBytes(bytes), nil
-}
-
-func (s *BaseHandler) CreateBinder(characterID string, normalizedURL string, metadataResponse gjson.Result) (*fetcher.MetadataBinder, error) {
-	return &fetcher.MetadataBinder{CharacterID: characterID, NormalizedURL: normalizedURL, Result: metadataResponse}, nil
+func (s *BaseHandler) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+	return &fetcher.MetadataBinder{
+		CharacterID:   characterID,
+		NormalizedURL: s.Fetcher.NormalizeURL(characterID),
+		DirectURL:     s.Fetcher.DirectURL(characterID),
+		JsonResponse:  metadataResponse,
+	}, nil
 }
 
 func (s *BaseHandler) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {

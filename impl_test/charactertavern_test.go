@@ -1,92 +1,82 @@
 package fetcher_test
 
-//
-//import (
-//	"testing"
-//
-//	"github.com/r3dpixel/card-fetcher/fetcher"
-//	"github.com/r3dpixel/card-fetcher/source"
-//	"github.com/r3dpixel/card-fetcher/task"
-//	"github.com/r3dpixel/card-parser/character"
-//	"github.com/r3dpixel/toolkit/stringsx"
-//	"github.com/stretchr/testify/assert"
-//)
-//
-//var testCharacterTavernFetcher = processor.New(fetcher.NewCharacterTavernFetcher())
-//
-//func TestCharacterTavernFetcher(t *testing.T) {
-//	assertSourceIsUp(t, testCharacterTavernFetcher)
-//}
-//
-//func TestCharacterTavernImport(t *testing.T) {
-//	t.Parallel()
-//
-//	const creator = "redpixel"
-//	const description = "Description AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-//	url := "https://character-tavern.com/character/redpixel/test"
-//	fetcherTask := task.New(testClient, testCharacterTavernFetcher, url, testCharacterTavernFetcher.MainURL())
-//	metadata, err := fetcherTask.FetchMetadata()
-//	assert.NoError(t, err)
-//
-//	card, err := fetcherTask.FetchCharacterCard()
-//	assert.NoError(t, err)
-//	jsonSheet := card.Sheet
-//
-//	metadata, err = fetcherTask.FetchMetadata()
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, "character-tavern.com/character/redpixel/test", metadata.CardURL)
-//	assert.Equal(t, "character-tavern.com/character/redpixel/test", metadata.DirectURL)
-//	assert.Equal(t, "redpixel/test", metadata.CharacterID)
-//	assert.Equal(t, "CT_bf4c92dee1f7690c28589360ee3f1380", metadata.PlatformID)
-//
-//	assertConsistency(t, metadata, card)
-//	assertCommonFields(t,
-//		metadata,
-//		jsonSheet,
-//		source.CharacterTavern,
-//		testCharacterTavernFetcher.NormalizeURL(metadata.CharacterID),
-//		creator,
-//		description,
-//		TestCardPersonality,
-//		stringsx.Empty,
-//		"main",
-//		TestCardTagline+"Description"+character.CreatorNotesSeparator+TestCardCreatorNotes,
-//		character.SpecV3,
-//		character.V3,
-//	)
-//	assertImage(t, card)
-//}
-//
-//func TestCharacterTavernImport_CCV3(t *testing.T) {
-//	url := "https://character-tavern.com/character/tidyup/beth_homeless_on_her_birthday_"
-//	fetcherTask := task.New(testClient, testCharacterTavernFetcher, url, testCharacterTavernFetcher.MainURL())
-//	metadata, err := fetcherTask.FetchMetadata()
-//	assert.NoError(t, err)
-//	card, err := fetcherTask.FetchCharacterCard()
-//	assert.NoError(t, err)
-//
-//	metadata, err = fetcherTask.FetchMetadata()
-//	assert.NoError(t, err)
-//	assertConsistency(t, metadata, card)
-//}
-//
-//func TestCharacterTavernImportFail(t *testing.T) {
-//	url := "character-tavern.com/character/brian007/lara_s"
-//	fetcherTask := task.New(testClient, testCharacterTavernFetcher, url, testCharacterTavernFetcher.MainURL())
-//	metadata, err := fetcherTask.FetchMetadata()
-//	assert.Error(t, err)
-//	assert.Nil(t, metadata)
-//}
-//
-////func TestCharacterTavernImportNotes(t *testing.T) {
-////	t.Parallel()
-////
-////	const creator = "animatedspell"
-////	url := "https://character-tavern.com/character/animatedspell/Violete%20V4"
-////	testWyvernFetcher := NewCharacterTavernFetcher()
-////	metadata, responseString := testWyvernFetcher.FetchCardInfo(url)
-////	card := testWyvernFetcher.FetchCharacterCard(metadata, responseString)
-////	jsonCard := card.Card
-////	println(jsonCard)
-////}
+import (
+	"testing"
+
+	"github.com/r3dpixel/card-fetcher/source"
+	"github.com/r3dpixel/card-parser/character"
+	"github.com/r3dpixel/toolkit/stringsx"
+)
+
+func TestCharacterTavernImport(t *testing.T) {
+	t.Parallel()
+	FetchAndAssert(t, "https://character-tavern.com/character/redpixel/test").
+		AssertNoErr().
+		Source(source.CharacterTavern).
+		NormalizedURL("character-tavern.com/character/redpixel/test").
+		DirectURL("character-tavern.com/character/redpixel/test").
+		CharacterPlatformID("CT_bf4c92dee1f7690c28589360ee3f1380").
+		CharacterID("redpixel/test").
+		Name("ChatName").
+		Title("Test").
+		Tagline("TaglineDescription").
+		CreateTime(1737895009100000000).
+		UpdateTime(1737944149051000000).
+		TagNames("Female").
+		Nickname("redpixel").
+		Username("redpixel").
+		CreatorPlatformID("obu6tvoquhr22npm").
+		BookUpdateTime(0).
+		SheetRevision(character.RevisionV3).
+		SheetDescription("Description AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").
+		SheetPersonality("Personality").
+		SheetScenario("Scenario").
+		SheetFirstMessage("FirstMessage").
+		SheetMessageExamples("ExampleDialog").
+		SheetCreatorNotes("TaglineDescription\n\nCreatorNotes").
+		SheetSystemPrompt(stringsx.Empty).
+		SheetPostHistoryInstructions("PostHistoryInstructions").
+		SheetAlternateGreetingsCount(1).
+		SheetTagNames("Female").
+		SheetNoCharacterBook().
+		SheetDepthPromptPrompt(stringsx.Empty).
+		SheetDepthPromptDepth(0).
+		SheetNickname("ChatName").
+		SheetCreator("redpixel").
+		Consistent().
+		AssertImage()
+}
+
+func TestCharacterTavernImport_CCV3(t *testing.T) {
+	t.Parallel()
+	FetchAndAssert(t, "https://character-tavern.com/character/tidyup/beth_homeless_on_her_birthday_").
+		AssertNoErr().
+		Source(source.CharacterTavern).
+		SheetRevision(character.RevisionV3).
+		Consistent().
+		AssertImage()
+}
+
+func TestCharacterTavernImportFail(t *testing.T) {
+	FetchAndAssert(t, "character-tavern.com/character/brian007/lara_s").
+		AssertErr()
+}
+
+func TestCharacterTavernImportNotes(t *testing.T) {
+	t.Parallel()
+	FetchAndAssert(t, "https://character-tavern.com/character/animatedspell/Violete%20V4").
+		AssertNoErr().
+		Source(source.CharacterTavern).
+		SheetCreator("animatedspell").
+		SheetCreatorNotes("Your shapeshifting monster waifu—sweet as sin, twice as wicked. A devoted lover by day, an Encyclopedia-inspired hentai experiment by night.\n\nViolete is a bot with lots of kinky tag, if you don't like any of her suggestion during chat, just gently asked her she will comply (tentacle, Insect,monster, monster girl, etc)").
+		Consistent().
+		AssertImage()
+}
+
+func TestCharacterTavernPngData(t *testing.T) {
+	FetchAndAssert(t, "https://character-tavern.com/character/wicked_ali/Veronica").
+		AssertNoErr().
+		Source(source.CharacterTavern).
+		Consistent().
+		AssertImage()
+}

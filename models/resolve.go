@@ -118,9 +118,10 @@ var StandardTags = map[Slug]string{
 	"slightdom":                           "Slight Dom",
 }
 
-func ResolveStandardTag(slug Slug, originalName string) string {
+func ResolveTag(stringTag string) Tag {
+	slug := SanitizeSlug(stringTag)
 	if standardName, ok := StandardTags[slug]; ok {
-		return standardName
+		return Tag{Slug: slug, Name: standardName}
 	}
-	return SanitizeName(originalName)
+	return Tag{Slug: slug, Name: SanitizeName(stringTag)}
 }

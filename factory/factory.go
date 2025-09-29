@@ -6,10 +6,11 @@ import (
 	"github.com/r3dpixel/card-fetcher/impl"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/toolkit/cred"
+	"github.com/r3dpixel/toolkit/reqx"
 )
 
 type Options struct {
-	Client                    *req.Client
+	ClientOptions             reqx.Options
 	PygmalionIdentityProvider cred.IdentityReader
 }
 
@@ -23,12 +24,12 @@ type factory struct {
 
 func New(opts Options) Factory {
 	return &factory{
-		client:                    opts.Client,
+		client:                    reqx.NewRetryClient(opts.ClientOptions),
 		pygmalionIdentityProvider: opts.PygmalionIdentityProvider,
 	}
 }
 
-func (f *factory) implementationOf(sourceID source.ID) fetcher.SourceHandler {
+func (f *factory) FetcherOf(sourceID source.ID) fetcher.Fetcher {
 	switch sourceID {
 	case source.CharacterTavern:
 		return impl.NewCharacterTavernFetcher(f.client)
@@ -45,12 +46,4 @@ func (f *factory) implementationOf(sourceID source.ID) fetcher.SourceHandler {
 	default:
 		return nil
 	}
-}
-
-func (f *factory) FetcherOf(sourceID source.ID) fetcher.Fetcher {
-	sourceHandler := f.implementationOf(sourceID)
-	if sourceHandler == nil {
-		return nil
-	}
-	return fetcher.New(sourceHandler)
 }

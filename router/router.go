@@ -1,17 +1,17 @@
 package router
 
 import (
+	"cmp"
 	"slices"
 	"sync"
 
-	"github.com/google/go-cmp/cmp"
+	gcmp "github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/factory"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-fetcher/task"
-	"github.com/r3dpixel/toolkit/reqx"
+	"github.com/r3dpixel/card-parser/property"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/rs/zerolog/log"
 )
@@ -27,6 +27,16 @@ const (
 	IntegrationSuccess       IntegrationStatus = "INTEGRATION SUCCESS"
 )
 
+var cmpOptions = []gcmp.Option{
+	cmpopts.EquateEmpty(),
+	cmpopts.SortSlices(comparator[string]),
+	cmpopts.SortSlices(comparator[int]),
+	cmpopts.SortSlices(comparator[float64]),
+	cmpopts.SortSlices(comparator[property.String]),
+	cmpopts.SortSlices(comparator[property.Integer]),
+	cmpopts.SortSlices(comparator[property.Float]),
+}
+
 type TaskBucket struct {
 	Tasks       map[string]task.Task
 	ValidURLs   []string
@@ -39,22 +49,15 @@ type TaskSlice struct {
 	InvalidURLs []string
 }
 
-type Options struct {
-	FactoryOptions factory.Options
-	ClientOptions  reqx.Options
-}
-
 type Router struct {
-	client    *req.Client
 	factory   factory.Factory
 	fetcherMu sync.RWMutex
 	fetchers  []fetcher.Fetcher
 }
 
-func New(opts Options) *Router {
+func New(opts factory.Options) *Router {
 	return &Router{
-		client:  reqx.NewRetryClient(opts.ClientOptions),
-		factory: factory.New(opts.FactoryOptions),
+		factory: factory.New(opts),
 	}
 }
 
@@ -205,9 +208,13 @@ func (r *Router) checkIntegration(f fetcher.Fetcher) IntegrationStatus {
 		return IntegrationFailure
 	}
 
-	if !cmp.Equal(localCard.Sheet, characterCard.Sheet, cmpopts.EquateEmpty()) {
+	if !gcmp.Equal(localCard.Sheet, characterCard.Sheet, cmpOptions...) {
 		return IntegrationFailure
 	}
 
 	return IntegrationSuccess
+}
+
+func comparator[T cmp.Ordered](a, b T) bool {
+	return a < b
 }
