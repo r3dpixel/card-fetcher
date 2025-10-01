@@ -1041,10 +1041,12 @@
         {
           "id": 29,
           "keys": [
-            "Explorers"
+            "Explorers guild",
+            "explorers",
+            "Adventurer guild"
           ],
           "secondary_keys": [
-            "Guild"
+            ""
           ],
           "name": "The Explorers guild",
           "comment": "The Explorers guild",
@@ -1076,12 +1078,12 @@
         {
           "id": 30,
           "keys": [
-            "Dark",
-            "Dark"
+            "Dark temple guild",
+            "Dark guild",
+            "Dark temple"
           ],
           "secondary_keys": [
-            "Guild",
-            "temple"
+            ""
           ],
           "name": "The Dark temple guild",
           "comment": "The Dark temple guild",
@@ -2053,7 +2055,7 @@
           "secondary_keys": [],
           "name": "Rykaran Queendom",
           "comment": "Rykaran Queendom",
-          "content": "The Rykaran Queendom is a small but prosperous country located in the center west of the continent; it is mainly inhabited by the Nêon'Itar and a few demons and elves. They have a rich history and culture, which includes poetry, music, dance, and storytelling.\n\n(Vola'rokûnd is the capital of the Rykaran Queendom.)\n\nThe Rykaran Kingdom was founded 300 years ago by the queen named UKan-Zyra Rykaran; she is still ruling the kingdom to this day.\nThe climate is temperate, with warm summers and cool winters. Most rain falls between April and October.\nThe kingdom has a varied terrain, with mountainous areas in the north and east, coastal plains in the south and west, and a central plateau.\nThe Rykaran people are known for their trades and military might despite their small country.\nThe Rykaran Queendom are allies of the Demonic Legion and isolationist elves.\nThe Rykaran kingdom does not want permanent human residents but allows trade and travel.",
+          "content": "The Rykaran Queendom is a small but prosperous country located in the center west of the continent; it is mainly inhabited by the Nêon'Itar and a few demons and elves. They have a rich history and culture, which includes poetry, music, dance, and storytelling.\n\n(Vola'rokûnd is the capital of the Rykaran Queendom.)\n\nThe Rykaran Queendom was founded 300 years ago by the queen named UKan-Zyra Rykaran; she is still ruling the Queendom to this day.\nThe climate is temperate, with warm summers and cool winters. Most rain falls between April and October.\nThe Queendom has a varied terrain, with mountainous areas in the north and east, coastal plains in the south and west, and a central plateau.\nThe Rykaran people are known for their trades and military might despite their small country.\nThe Rykaran Queendom are allies of the Demonic Legion and isolationist elves.\nThe Rykaran Queendom does not want permanent human residents but allows trade and travel.",
           "constant": false,
           "selective": false,
           "insertion_order": 10,
@@ -3247,10 +3249,12 @@
         {
           "id": 93,
           "keys": [
-            "Explorers"
+            "Explorers guild",
+            "Explorers",
+            "Arkeath"
           ],
           "secondary_keys": [
-            "Guild"
+            ""
           ],
           "name": "Borchi guild                                                                       *change key when creating other branches hub*",
           "comment": "Borchi guild                                                                       *change key when creating other branches hub*",
@@ -3598,7 +3602,7 @@
           "secondary_keys": [],
           "name": "Arkeath",
           "comment": "Arkeath",
-          "content": "Arkeath is a settlement located in Borchi and affiliated with the explorers guild. it is located in the Borchi heath. The Borchi explorers guild, the Borchi archive, the tavern and the hot springs are located there.\nArkeath is owned and protected by the explorers guild.",
+          "content": "Arkeath is a settlement located in Borchi and affiliated with the explorers guild. it is located in the Borchi region, in a greener area near the heath. The Borchi explorers guild, the Borchi archive, the tavern and the hot springs are located there.\nArkeath is owned and protected by the explorers guild.",
           "constant": false,
           "selective": false,
           "insertion_order": 10,
