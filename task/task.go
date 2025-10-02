@@ -134,7 +134,12 @@ func executeMetadataFlow(
 	if err != nil {
 		return nil, err
 	}
-	metadata := &models.Metadata{CardInfo: *cardInfo, CreatorInfo: *creatorInfo, BookUpdateTime: binder.UpdateTime}
+	metadata := &models.Metadata{
+		Source:         f.SourceID(),
+		CardInfo:       *cardInfo,
+		CreatorInfo:    *creatorInfo,
+		BookUpdateTime: binder.UpdateTime,
+	}
 	fetcher.PatchMetadata(metadata)
 	return metadata, nil
 }

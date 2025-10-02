@@ -11,13 +11,13 @@ import (
 )
 
 type Metadata struct {
+	Source source.ID
 	CardInfo
 	CreatorInfo
 	BookUpdateTime timestamp.Nano
 }
 
 type CardInfo struct {
-	Source        source.ID
 	NormalizedURL string
 	DirectURL     string
 	PlatformID    string

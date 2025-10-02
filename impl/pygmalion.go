@@ -89,7 +89,6 @@ func (s *pygmalionFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder)
 	characterNode := metadataBinder.Get("character")
 
 	return &models.CardInfo{
-		Source:        s.sourceID,
 		NormalizedURL: metadataBinder.NormalizedURL,
 		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    metadataBinder.CharacterID,

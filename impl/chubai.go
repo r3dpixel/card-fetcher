@@ -81,7 +81,6 @@ func (s *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 	definitionNode := node.Get("definition")
 
 	return &models.CardInfo{
-		Source:        s.sourceID,
 		NormalizedURL: metadataBinder.NormalizedURL,
 		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    node.Get("id").String(),

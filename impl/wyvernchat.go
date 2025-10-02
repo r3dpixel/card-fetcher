@@ -61,7 +61,6 @@ func (s *wyvernChatFetcher) CreateBinder(characterID string, metadataResponse fe
 
 func (s *wyvernChatFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
 	return &models.CardInfo{
-		Source:        s.sourceID,
 		NormalizedURL: metadataBinder.NormalizedURL,
 		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    strings.TrimPrefix(metadataBinder.CharacterID, symbols.Underscore),

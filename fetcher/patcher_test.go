@@ -1325,8 +1325,8 @@ func TestPatchBook(t *testing.T) {
 func TestPatchLink(t *testing.T) {
 	t.Run("should set all link fields correctly", func(t *testing.T) {
 		metadata := &models.Metadata{
+			Source: source.ChubAI,
 			CardInfo: models.CardInfo{
-				Source:        source.ChubAI,
 				CharacterID:   "test-char-123",
 				PlatformID:    "platform-456",
 				DirectURL:     "https://example.com/direct/test-char-123",
@@ -1348,8 +1348,8 @@ func TestPatchLink(t *testing.T) {
 
 	t.Run("should handle empty fields", func(t *testing.T) {
 		metadata := &models.Metadata{
+			Source: "",
 			CardInfo: models.CardInfo{
-				Source:      "",
 				CharacterID: "",
 				PlatformID:  "",
 				DirectURL:   "",
@@ -1370,8 +1370,8 @@ func TestPatchLink(t *testing.T) {
 
 	t.Run("should overwrite existing fields", func(t *testing.T) {
 		metadata := &models.Metadata{
+			Source: source.ChubAI,
 			CardInfo: models.CardInfo{
-				Source:      source.ChubAI,
 				CharacterID: "new-char-123",
 				PlatformID:  "new-platform-456",
 				DirectURL:   "https://new.com/direct/new-char-123",
@@ -1403,8 +1403,8 @@ func TestPatchLink(t *testing.T) {
 
 		for _, src := range sources {
 			metadata := &models.Metadata{
+				Source: src,
 				CardInfo: models.CardInfo{
-					Source:      src,
 					CharacterID: "test-char",
 					PlatformID:  "test-platform",
 					DirectURL:   "https://test.com",
@@ -1423,8 +1423,8 @@ func TestPatchLink(t *testing.T) {
 
 	t.Run("should handle unicode and special characters", func(t *testing.T) {
 		metadata := &models.Metadata{
+			Source: source.ChubAI,
 			CardInfo: models.CardInfo{
-				Source:      source.ChubAI,
 				CharacterID: "テスト-キャラ-123",
 				PlatformID:  "プラットフォーム-456",
 				DirectURL:   "https://example.com/direct/テスト-キャラ-123",
@@ -1452,8 +1452,8 @@ func TestPatchLink(t *testing.T) {
 		longURL := "https://example.com/very/long/path/" + longID
 
 		metadata := &models.Metadata{
+			Source: source.ChubAI,
 			CardInfo: models.CardInfo{
-				Source:      source.ChubAI,
 				CharacterID: longID,
 				PlatformID:  longID,
 				DirectURL:   longURL,
@@ -1474,8 +1474,8 @@ func TestPatchLink(t *testing.T) {
 
 	t.Run("should handle whitespace in fields", func(t *testing.T) {
 		metadata := &models.Metadata{
+			Source: source.ChubAI,
 			CardInfo: models.CardInfo{
-				Source:      source.ChubAI,
 				CharacterID: "  char-123  ",
 				PlatformID:  "\tplatform-456\n",
 				DirectURL:   "  https://example.com/direct  ",
@@ -1497,8 +1497,8 @@ func TestPatchLink(t *testing.T) {
 
 	t.Run("should handle special characters in URLs", func(t *testing.T) {
 		metadata := &models.Metadata{
+			Source: source.ChubAI,
 			CardInfo: models.CardInfo{
-				Source:      source.ChubAI,
 				CharacterID: "char@123#",
 				PlatformID:  "platform$456%",
 				DirectURL:   "https://example.com/direct?char=123&test=true",
@@ -1519,8 +1519,8 @@ func TestPatchLink(t *testing.T) {
 
 	t.Run("should handle newlines in fields", func(t *testing.T) {
 		metadata := &models.Metadata{
+			Source: source.ChubAI,
 			CardInfo: models.CardInfo{
-				Source:      source.ChubAI,
 				CharacterID: "char\n123",
 				PlatformID:  "platform\r\n456",
 				DirectURL:   "https://example.com/direct\ntest",
@@ -1550,8 +1550,8 @@ func TestPatchSheet(t *testing.T) {
 
 		bookName := character.BookNamePlaceholder + " Adventures"
 		metadata := &models.Metadata{
+			Source: source.ChubAI,
 			CardInfo: models.CardInfo{
-				Source:        source.ChubAI,
 				NormalizedURL: "example.com/characters/test-char-123",
 				DirectURL:     "example.com/direct/test-char-123",
 				PlatformID:    "platform-123",

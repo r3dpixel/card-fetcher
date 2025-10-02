@@ -65,7 +65,6 @@ func (s *pephopFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 	)
 
 	metadata := &models.CardInfo{
-		Source:        s.sourceID,
 		NormalizedURL: metadataBinder.NormalizedURL,
 		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    metadataBinder.CharacterID,

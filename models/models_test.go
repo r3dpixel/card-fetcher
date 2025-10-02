@@ -17,8 +17,8 @@ func createConsistentPair() (*Metadata, *character.Sheet) {
 	bookUpdateTime := now
 
 	metadata := &Metadata{
+		Source: source.ID("test-source"),
 		CardInfo: CardInfo{
-			Source:        source.ID("test-source"),
 			NormalizedURL: "https://example.com/card",
 			DirectURL:     "https://example.com/direct",
 			PlatformID:    "platform-123",
@@ -260,8 +260,8 @@ func TestMetadata_IsConsistentWith(t *testing.T) {
 func TestMetadata_IsMalformed(t *testing.T) {
 	t.Run("should return false for well-formed metadata", func(t *testing.T) {
 		metadata := &Metadata{
+			Source: source.ID("test-source"),
 			CardInfo: CardInfo{
-				Source:        source.ID("test-source"),
 				NormalizedURL: "https://example.com/card",
 				DirectURL:     "https://example.com/direct",
 				PlatformID:    "platform-123",
@@ -381,8 +381,8 @@ func TestMetadata_IsMalformed(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				// Create well-formed metadata
 				metadata := &Metadata{
+					Source: source.ID("test-source"),
 					CardInfo: CardInfo{
-						Source:        source.ID("test-source"),
 						NormalizedURL: "https://example.com/card",
 						DirectURL:     "https://example.com/direct",
 						PlatformID:    "platform-123",
@@ -473,8 +473,8 @@ func TestMetadata_LatestUpdateTime(t *testing.T) {
 
 func TestMetadata_Clone(t *testing.T) {
 	original := &Metadata{
+		Source: source.ID("test-source"),
 		CardInfo: CardInfo{
-			Source:        source.ID("test-source"),
 			NormalizedURL: "https://example.com/card",
 			DirectURL:     "https://direct.example.com/card",
 			PlatformID:    "platform-123",

@@ -79,7 +79,6 @@ func (s *characterTavernFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataB
 	resolvedTags := models.TagsFromJsonArray(&tagNode, sonicx.String)
 
 	return &models.CardInfo{
-		Source:        source.CharacterTavern,
 		NormalizedURL: metadataBinder.NormalizedURL,
 		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    platformID,

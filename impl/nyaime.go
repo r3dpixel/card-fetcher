@@ -89,7 +89,6 @@ func (s *nyaiMeFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 	)
 
 	metadata := &models.CardInfo{
-		Source:        s.sourceID,
 		NormalizedURL: metadataBinder.NormalizedURL,
 		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    postNode.Get("ID").String(),
