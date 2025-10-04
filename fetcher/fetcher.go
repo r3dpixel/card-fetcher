@@ -13,6 +13,7 @@ type JsonResponse = *sonicx.Wrap
 type Fetcher interface {
 	Extends(top Fetcher)
 	SourceID() source.ID
+
 	SourceURL() string
 	MainURL() string
 	BaseURLs() []string

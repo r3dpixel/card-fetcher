@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/models"
@@ -16,7 +15,6 @@ import (
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/slicesx"
 	"github.com/r3dpixel/toolkit/sonicx"
-	"github.com/r3dpixel/toolkit/stringsx"
 )
 
 const (
@@ -37,7 +35,7 @@ type characterTavernFetcher struct {
 }
 
 // NewCharacterTavernFetcher - Create a new CharacterTavern source
-func NewCharacterTavernFetcher(client *req.Client) fetcher.Fetcher {
+func NewCharacterTavernFetcher(client *reqx.Client) fetcher.Fetcher {
 	impl := &characterTavernFetcher{
 		BaseHandler: BaseHandler{
 			client:    client,
@@ -65,18 +63,16 @@ func (s *characterTavernFetcher) CreateBinder(characterID string, metadataRespon
 func (s *characterTavernFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
 	cardNode := metadataBinder.Get("card")
 	platformID := cardNode.Get("id").String()
-	tagResponse, err := reqx.FetchBody(func() (*req.Response, error) {
-		return s.client.R().Get(fmt.Sprintf(characterTavernTagsURL, platformID))
-	})
+	tagResponse, err := reqx.String(s.client.R().Get(fmt.Sprintf(characterTavernTagsURL, platformID)))
 	if err != nil {
 		return nil, err
 	}
 
-	tagNode, err := sonic.GetFromString(stringsx.FromBytes(tagResponse))
+	tagNode, err := sonicx.GetFromString(tagResponse)
 	if err != nil {
 		return nil, err
 	}
-	resolvedTags := models.TagsFromJsonArray(&tagNode, sonicx.String)
+	resolvedTags := models.TagsFromJsonArray(tagNode, sonicx.WrapString)
 
 	return &models.CardInfo{
 		NormalizedURL: metadataBinder.NormalizedURL,
@@ -126,14 +122,13 @@ func (s *characterTavernFetcher) FetchCharacterCard(binder *fetcher.Binder) (*pn
 	sheet.PostHistoryInstructions.SetIf(cardNode.Get("definition_post_history_prompt").String())
 
 	platformID := cardNode.Get("id").String()
-	greetingsResponse, err := reqx.FetchBody(func() (*req.Response, error) {
-		return s.client.R().Get(fmt.Sprintf(characterTavernGreetingsURL, platformID))
-	})
+	greetingsResponse, err := reqx.String(s.client.R().Get(fmt.Sprintf(characterTavernGreetingsURL, platformID)))
 	if err != nil {
 		return nil, err
 	}
+
 	var greetings property.StringArray
-	if err := sonicx.Config.UnmarshalFromString(stringsx.FromBytes(greetingsResponse), &greetings); err != nil {
+	if err := sonicx.Config.UnmarshalFromString(greetingsResponse, &greetings); err != nil {
 		return nil, err
 	}
 

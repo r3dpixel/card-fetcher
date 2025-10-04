@@ -5,8 +5,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/bytedance/sonic"
-	"github.com/bytedance/sonic/ast"
 	"github.com/r3dpixel/toolkit/sonicx"
 	"github.com/stretchr/testify/assert"
 )
@@ -148,13 +146,13 @@ func TestTagsFromJsonArray(t *testing.T) {
 	testCases := []struct {
 		name      string
 		jsonInput string
-		extractor func(node *ast.Node) string
+		extractor func(node *sonicx.Wrap) string
 		expected  []Tag
 	}{
 		{
 			name:      "Simple string array",
 			jsonInput: `["tag1", "T A G 2", "★tag3"]`,
-			extractor: sonicx.String,
+			extractor: sonicx.WrapString,
 			expected: []Tag{
 				{Slug: "tag1", Name: "Tag1"},
 				{Slug: "tag2", Name: "T A G 2"},
@@ -164,7 +162,7 @@ func TestTagsFromJsonArray(t *testing.T) {
 		{
 			name:      "Array of objects",
 			jsonInput: `[{"name": "tag1"}, {"name": "tag2"}]`,
-			extractor: func(r *ast.Node) string { return sonicx.OfPtr(r).Get("name").String() },
+			extractor: func(r *sonicx.Wrap) string { return r.Get("name").String() },
 			expected: []Tag{
 				{Slug: "tag1", Name: "Tag1"},
 				{Slug: "tag2", Name: "Tag2"},
@@ -173,13 +171,13 @@ func TestTagsFromJsonArray(t *testing.T) {
 		{
 			name:      "Empty array",
 			jsonInput: `[]`,
-			extractor: sonicx.String,
+			extractor: sonicx.WrapString,
 			expected:  nil,
 		},
 		{
 			name:      "Array with blank items to be filtered",
 			jsonInput: `["tag1", "  ", "tag2"]`,
-			extractor: sonicx.String,
+			extractor: sonicx.WrapString,
 			expected: []Tag{
 				{Slug: "tag1", Name: "Tag1"},
 				{Slug: "tag2", Name: "Tag2"},
@@ -189,8 +187,8 @@ func TestTagsFromJsonArray(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			jsonArray, _ := sonic.GetFromString(tc.jsonInput)
-			result := TagsFromJsonArray(&jsonArray, tc.extractor)
+			jsonArray, _ := sonicx.GetFromString(tc.jsonInput)
+			result := TagsFromJsonArray(jsonArray, tc.extractor)
 			slices.SortFunc(tc.expected, func(a, b Tag) int { return cmp.Compare(a.Name, b.Name) })
 			assert.Equal(t, tc.expected, result)
 		})

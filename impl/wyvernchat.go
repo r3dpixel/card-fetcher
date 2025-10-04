@@ -12,6 +12,7 @@ import (
 	"github.com/r3dpixel/card-parser/character"
 	"github.com/r3dpixel/card-parser/png"
 	"github.com/r3dpixel/card-parser/property"
+	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/sonicx"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/symbols"
@@ -35,7 +36,7 @@ type wyvernChatFetcher struct {
 }
 
 // WyvernChatHandler - Create a new WyvernChat source
-func WyvernChatHandler(client *req.Client) fetcher.Fetcher {
+func WyvernChatHandler(client *reqx.Client) fetcher.Fetcher {
 	impl := &wyvernChatFetcher{
 		BaseHandler: BaseHandler{
 			client:    client,
@@ -70,7 +71,7 @@ func (s *wyvernChatFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder
 		Tagline:       metadataBinder.Get("tagline").String(),
 		CreateTime:    s.fromDate(wyvernDateFormat, metadataBinder.Get("created_at").String(), metadataBinder.NormalizedURL),
 		UpdateTime:    s.fromDate(wyvernDateFormat, metadataBinder.Get("updated_at").String(), metadataBinder.NormalizedURL),
-		Tags:          models.TagsFromJsonArray(&metadataBinder.Get("tags").Node, sonicx.String),
+		Tags:          models.TagsFromJsonArray(metadataBinder.Get("tags"), sonicx.WrapString),
 	}, nil
 }
 

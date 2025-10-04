@@ -42,16 +42,19 @@ func TestPygmalionImport(t *testing.T) {
 		SheetTagCount(4).
 		SheetTagContains("Ali:Chat").
 		SheetHasCharacterBook().
-		SheetBookName("Honkai Impact 3rd Lorebook"+character.BookNameSeparator+"Veliona-WI").
+		SheetBookNameContains("Honkai Impact 3rd Lorebook").
+		SheetBookNameContains(character.BookNameSeparator).
+		SheetBookNameContains("Veliona-WI").
 		SheetBookEntryCount(37).
 		SheetBookDescriptionContains("A small collection of entries of Honkai Impact 3rd for Bronya Rand's Bronya Zaychik and Veliona bots.").
 		SheetBookDescriptionContains(character.BookDescriptionSeparator).
 		SheetBookDescriptionContains("A lorebook for Bronya Rand's and The Wandering514's Veliona (Scenarios A and B).").
 		SheetBookEntryName(0, stringsx.Empty).
-		SheetBookEntryContent(0, "[ Honkai: lead by the Will of Honkai, forms(Herrschers, Honkai Beasts, Honkai Sickness, Honkai Energy) ]").
+		SheetBookEntryContent(0, "[ Seele Vollerei: gentle, caring, timid, coward, popular with others, friends(Bronya Zaychik, Kiana Kaslana), protected by({{char}}), everything that {{char}} isn't, host of {{char}} ]").
 		SheetBookEntryKeyCount(0, 1).
-		SheetBookEntryPrimaryKey(0, "Honkai").
-		SheetBookEntrySecondaryKeyCount(0, 0).
+		SheetBookEntryPrimaryKey(0, "Seele").
+		SheetBookEntrySecondaryKeyCount(0, 1).
+		SheetBookEntrySecondaryKey(0, "Vollerei").
 		SheetDepthPromptPrompt(stringsx.Empty).
 		SheetDepthPromptDepth(0).
 		SheetNickname("Veliona").

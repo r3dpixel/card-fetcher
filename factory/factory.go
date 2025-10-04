@@ -1,7 +1,6 @@
 package factory
 
 import (
-	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/impl"
 	"github.com/r3dpixel/card-fetcher/source"
@@ -18,13 +17,13 @@ type Factory interface {
 	FetcherOf(sourceID source.ID) fetcher.Fetcher
 }
 type factory struct {
-	client                    *req.Client
+	client                    *reqx.Client
 	pygmalionIdentityProvider cred.IdentityReader
 }
 
 func New(opts Options) Factory {
 	return &factory{
-		client:                    reqx.NewRetryClient(opts.ClientOptions),
+		client:                    reqx.NewClient(opts.ClientOptions),
 		pygmalionIdentityProvider: opts.PygmalionIdentityProvider,
 	}
 }

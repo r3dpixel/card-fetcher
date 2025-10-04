@@ -5,8 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytedance/sonic"
-	"github.com/bytedance/sonic/ast"
 	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/models"
@@ -14,6 +12,7 @@ import (
 	"github.com/r3dpixel/card-parser/character"
 	"github.com/r3dpixel/card-parser/png"
 	"github.com/r3dpixel/card-parser/property"
+	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/sonicx"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/symbols"
@@ -38,7 +37,7 @@ type nyaiMeFetcher struct {
 }
 
 // NewNyaiMeFetcher - Create a new NyaiMe source
-func NewNyaiMeFetcher(client *req.Client) fetcher.Fetcher {
+func NewNyaiMeFetcher(client *reqx.Client) fetcher.Fetcher {
 	impl := &nyaiMeFetcher{
 		BaseHandler: BaseHandler{
 			client:    client,
@@ -77,14 +76,14 @@ func (s *nyaiMeFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 
 	var name string
 	raw := stringsx.Unquote(postNode.GetByPath("AdditionalDefinitions", 0, "BotJSONBase64").Raw())
-	if additionalDefinitions, err := sonic.GetFromString(raw); err == nil {
-		name = sonicx.OfPtr(additionalDefinitions.GetByPath("data", "name")).String()
+	if additionalDefinitions, err := sonicx.GetFromString(raw); err == nil {
+		name = additionalDefinitions.GetByPath("data", "name").String()
 	}
 
 	tags := models.TagsFromJsonArray(
-		postNode.Node.Get("Tags"),
-		func(result *ast.Node) string {
-			return sonicx.OfPtr(result.Get("Name")).String()
+		postNode.Get("Tags"),
+		func(result *sonicx.Wrap) string {
+			return result.Get("Name").String()
 		},
 	)
 

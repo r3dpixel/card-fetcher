@@ -7,7 +7,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/bytedance/sonic/ast"
 	"github.com/r3dpixel/toolkit/sonicx"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/symbols"
@@ -58,13 +57,13 @@ func TagsFromMap(tags map[Slug]string) []Tag {
 }
 
 // TagsFromJsonArray - given an array GJson result, return a list of tags, extracted from the array
-func TagsFromJsonArray(array *ast.Node, extractor func(result *ast.Node) string) []Tag {
+func TagsFromJsonArray(array *sonicx.Wrap, extractor func(result *sonicx.Wrap) string) []Tag {
 	tags := sonicx.ArrayToSlice(
 		array,
 		func(tag Tag) bool {
 			return stringsx.IsNotBlank(tag.Slug)
 		},
-		func(result *ast.Node) Tag {
+		func(result *sonicx.Wrap) Tag {
 			return ResolveTag(extractor(result))
 		},
 	)

@@ -7,8 +7,8 @@ import (
 	"github.com/r3dpixel/card-fetcher/factory"
 	"github.com/r3dpixel/card-fetcher/router"
 	"github.com/r3dpixel/card-fetcher/task"
-	"github.com/r3dpixel/card-parser/character"
 	"github.com/r3dpixel/toolkit/cred"
+	"github.com/r3dpixel/toolkit/jsonx"
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/sonicx"
 	"github.com/rs/zerolog/log"
@@ -57,7 +57,10 @@ func saveSnapshot(t task.Task) {
 		return
 	}
 
-	err = card.Sheet.ToFile(router.GetResourceJsonPath(t.SourceID()), character.JsonPretty)
+	err = card.Sheet.ToFile(router.GetResourceJsonPath(t.SourceID()), jsonx.Options{
+		Pretty: true,
+		Indent: "  ",
+	})
 	if err != nil {
 		log.Err(err).Msg("Failed to save JSON " + t.NormalizedURL())
 		return

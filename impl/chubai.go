@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/elliotchance/orderedmap/v3"
 	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
@@ -52,7 +51,7 @@ type chubAIFetcher struct {
 }
 
 // NewChubAIFetcher - Create a new ChubAI source
-func NewChubAIFetcher(client *req.Client) fetcher.Fetcher {
+func NewChubAIFetcher(client *reqx.Client) fetcher.Fetcher {
 	impl := &chubAIFetcher{
 		BaseHandler: BaseHandler{
 			client:    client,
@@ -90,24 +89,22 @@ func (s *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 		Tagline:       node.Get("tagline").String(),
 		CreateTime:    s.fromDate(chubAiDateFormat, node.Get("createdAt").String(), metadataBinder.NormalizedURL),
 		UpdateTime:    s.fromDate(chubAiDateFormat, node.Get("lastActivityAt").String(), metadataBinder.NormalizedURL),
-		Tags:          models.TagsFromJsonArray(&node.Get("topics").Node, sonicx.String),
+		Tags:          models.TagsFromJsonArray(node.Get("topics"), sonicx.WrapString),
 	}, nil
 }
 
 func (s *chubAIFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
 	displayName := strings.Split(metadataBinder.CharacterID, `/`)[0]
 
-	response, err := reqx.FetchBody(func() (*req.Response, error) {
-		return s.client.R().Get(fmt.Sprintf(chubApiUsersURL, displayName))
-	})
+	response, err := reqx.String(s.client.R().Get(fmt.Sprintf(chubApiUsersURL, displayName)))
 	if err != nil {
 		return nil, err
 	}
-	node, err := sonic.GetFromString(stringsx.FromBytes(response))
+
+	wrap, err := sonicx.GetFromString(response)
 	if err != nil {
 		return nil, err
 	}
-	wrap := sonicx.Of(node)
 
 	return &models.CreatorInfo{
 		Nickname:   wrap.Get("username").String(),
@@ -118,12 +115,12 @@ func (s *chubAIFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder)
 
 func (s *chubAIFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
 	bookIDs := sonicx.ArrayToMap(
-		&metadataBinder.GetByPath("node", "related_lorebooks").Node,
+		metadataBinder.GetByPath("node", "related_lorebooks"),
 		func(token string) bool {
 			intToken, tokenErr := cast.ToIntE(token)
 			return tokenErr != nil || (tokenErr == nil && intToken >= 0)
 		},
-		sonicx.String,
+		sonicx.WrapString,
 	)
 
 	linkedBookResponses, linkedBookUpdateTime := s.retrieveLinkedBooks(metadataBinder, bookIDs)
@@ -265,11 +262,11 @@ func (s *chubAIFetcher) retrieveAuxBooks(metadataBinder *fetcher.MetadataBinder,
 }
 
 func (s *chubAIFetcher) retrieveBookData(metadataBinder *fetcher.MetadataBinder, bookID string) (fetcher.JsonResponse, timestamp.Nano, bool) {
-	response, err := reqx.FetchBody(func() (*req.Response, error) {
-		return s.client.R().
+	response, err := reqx.String(
+		s.client.R().
 			SetContentType(reqx.JsonApplicationContentType).
-			Get(fmt.Sprintf(chubApiBookURL, bookID))
-	})
+			Get(fmt.Sprintf(chubApiBookURL, bookID)),
+	)
 
 	if err != nil {
 		log.Warn().Err(err).
@@ -277,19 +274,19 @@ func (s *chubAIFetcher) retrieveBookData(metadataBinder *fetcher.MetadataBinder,
 			Str(trace.URL, metadataBinder.DirectURL).
 			Str("bookID", bookID).
 			Msg("Lorebook unlinked/deleted")
-		return sonicx.Of(sonicx.Empty), 0, false
+		return sonicx.Empty, 0, false
 	}
 
-	node, err := sonic.GetFromString(stringsx.FromBytes(response))
+	wrap, err := sonicx.GetFromString(response)
 	if err != nil {
 		log.Warn().Err(err).
 			Str(trace.SOURCE, string(s.sourceID)).
 			Str(trace.URL, metadataBinder.DirectURL).
 			Str("bookID", bookID).
 			Msg("Could not parse book")
-		return sonicx.Of(sonicx.Empty), 0, false
+		return sonicx.Empty, 0, false
 	}
-	wrap := sonicx.Of(node)
+
 	updateTime := s.fromDate(chubAiDateFormat, wrap.GetByPath("node", "lastActivityAt").String(), metadataBinder.DirectURL)
 	return wrap, updateTime, true
 }

@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bytedance/sonic/ast"
 	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/png"
 	"github.com/r3dpixel/card-parser/property"
+	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/sonicx"
 )
 
@@ -30,7 +30,7 @@ type pephopFetcher struct {
 }
 
 // NewPephopFetcher - Create a new ChubAI source
-func NewPephopFetcher(client *req.Client) fetcher.Fetcher {
+func NewPephopFetcher(client *reqx.Client) fetcher.Fetcher {
 	impl := &pephopFetcher{
 		BaseHandler: BaseHandler{
 			client:    client,
@@ -58,9 +58,9 @@ func (s *pephopFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 	cardName := metadataBinder.Get("name").String()
 
 	tags := models.TagsFromJsonArray(
-		&metadataBinder.Get("tags").Node,
-		func(result *ast.Node) string {
-			return sonicx.OfPtr(result.Get("name")).String()
+		metadataBinder.Get("tags"),
+		func(result *sonicx.Wrap) string {
+			return result.Get("name").String()
 		},
 	)
 

@@ -1,9 +1,11 @@
 package impl
 
 import (
+	"fmt"
+	"path"
 	"strings"
 
-	"github.com/imroc/req/v3"
+	"github.com/google/uuid"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/toolkit/reqx"
@@ -17,16 +19,18 @@ const ()
 // BaseHandler - Embeddable struct for creating a new source
 type BaseHandler struct {
 	fetcher.Fetcher
-	client    *req.Client
-	sourceID  source.ID
-	sourceURL string
-	directURL string
-	mainURL   string
-	baseURLs  []string
+	serviceLabel string
+	client       *reqx.Client
+	sourceID     source.ID
+	sourceURL    string
+	directURL    string
+	mainURL      string
+	baseURLs     []string
 }
 
 func (s *BaseHandler) Extends(top fetcher.Fetcher) {
 	s.Fetcher = top
+	s.computeServiceLabel()
 }
 
 func (s *BaseHandler) SourceID() source.ID {
@@ -51,11 +55,11 @@ func (s *BaseHandler) CharacterID(url string, matchedURL string) string {
 }
 
 func (s *BaseHandler) DirectURL(characterID string) string {
-	return s.directURL + characterID
+	return path.Join(s.directURL, characterID)
 }
 
 func (s *BaseHandler) NormalizeURL(characterID string) string {
-	return s.Fetcher.MainURL() + characterID
+	return path.Join(s.Fetcher.MainURL(), characterID)
 }
 
 func (s *BaseHandler) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
@@ -72,8 +76,12 @@ func (s *BaseHandler) FetchBookResponses(metadataBinder *fetcher.MetadataBinder)
 }
 
 func (s *BaseHandler) IsSourceUp() bool {
-	response, err := s.client.R().Get("https://" + s.sourceURL)
-	return reqx.IsResponseErrOk(response, err)
+	_, err := s.client.R().Get("https://" + s.sourceURL)
+	return err == nil
+}
+
+func (s *BaseHandler) computeServiceLabel() {
+	s.serviceLabel = fmt.Sprintf("%s::%s", s.Fetcher.SourceID(), uuid.New())
 }
 
 func (s *BaseHandler) fromDate(format string, date string, url string) timestamp.Nano {

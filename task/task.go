@@ -3,15 +3,12 @@ package task
 import (
 	"sync"
 
-	"github.com/bytedance/sonic"
-	"github.com/imroc/req/v3"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/png"
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/sonicx"
-	"github.com/r3dpixel/toolkit/stringsx"
 )
 
 type Task interface {
@@ -97,17 +94,13 @@ func executeBinderFlow(
 	characterID,
 	normalizedURL string,
 ) (*fetcher.Binder, error) {
-	response, err := reqx.FetchBody(
-		func() (*req.Response, error) {
-			return f.FetchMetadataResponse(characterID)
-		},
-	)
+	response, err := reqx.String(f.FetchMetadataResponse(characterID))
 
-	metadataResponse, err := sonic.GetFromString(stringsx.FromBytes(response))
+	metadataResponse, err := sonicx.GetFromString(response)
 	if err != nil {
 		return nil, err
 	}
-	metadataBinder, err := f.CreateBinder(characterID, sonicx.Of(metadataResponse))
+	metadataBinder, err := f.CreateBinder(characterID, metadataResponse)
 	if err != nil {
 		return nil, err
 	}

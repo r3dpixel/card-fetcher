@@ -311,6 +311,11 @@ func (ca *CharacterAssertion) TaglineContains(substring string) *CharacterAssert
 	return ca
 }
 
+func (ca *CharacterAssertion) SheetBookNameContains(substring string) *CharacterAssertion {
+	assert.Contains(ca.t, string(ca.sheet.CharacterBook.Name), substring, "Book name should contain: %s", substring)
+	return ca
+}
+
 func (ca *CharacterAssertion) SheetBookDescriptionContains(substring string) *CharacterAssertion {
 	assert.Contains(ca.t, string(ca.sheet.CharacterBook.Description), substring, "Book description should contain: %s", substring)
 	return ca
@@ -793,9 +798,6 @@ func (ca *CharacterAssertion) SheetBookEntryPrimaryKey(entryIndex int, expected 
 }
 
 func (ca *CharacterAssertion) SheetBookEntrySecondaryKey(entryIndex int, expected string) *CharacterAssertion {
-	require.Greater(ca.t, len(ca.sheet.CharacterBook.Entries), entryIndex, "Entry index %d out of bounds", entryIndex)
-	require.NotEmpty(ca.t, ca.sheet.CharacterBook.Entries[entryIndex].SecondaryKeys, "Entry[%d] should have secondary keys", entryIndex)
-
 	found := false
 	for _, key := range ca.sheet.CharacterBook.Entries[entryIndex].SecondaryKeys {
 		if key == expected {

@@ -40,15 +40,12 @@ const (
 
 type pygmalionFetcher struct {
 	BaseHandler
-	identityReader cred.IdentityReader
-	authManager    *reqx.AuthManager
-	headers        map[string]string
+	headers map[string]string
 }
 
 // NewPygmalionFetcher - Create a new ChubAI source
-func NewPygmalionFetcher(client *req.Client, identityReader cred.IdentityReader) fetcher.Fetcher {
+func NewPygmalionFetcher(client *reqx.Client, identityReader cred.IdentityReader) fetcher.Fetcher {
 	impl := &pygmalionFetcher{
-		identityReader: identityReader,
 		headers: map[string]string{
 			"Referer": pygmalionReferer,
 			"Origin":  pygmalionOrigin,
@@ -63,8 +60,9 @@ func NewPygmalionFetcher(client *req.Client, identityReader cred.IdentityReader)
 			baseURLs:  []string{pygmalionBaseURL},
 		},
 	}
-	impl.authManager = reqx.NewAuthManager(client, impl.refreshBearerToken)
 	impl.Extends(impl)
+	impl.client.RegisterAuth(impl.serviceLabel, identityReader, impl.refreshBearerToken)
+
 	return impl
 }
 
@@ -98,7 +96,7 @@ func (s *pygmalionFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder)
 		Tagline:       characterNode.Get("description").String(),
 		CreateTime:    timestamp.Convert[timestamp.Nano](timestamp.Seconds(characterNode.Get("createdAt").Integer64())),
 		UpdateTime:    timestamp.Convert[timestamp.Nano](timestamp.Seconds(characterNode.Get("updatedAt").Integer64())),
-		Tags:          models.TagsFromJsonArray(&characterNode.Get("tags").Node, sonicx.String),
+		Tags:          models.TagsFromJsonArray(characterNode.Get("tags"), sonicx.WrapString),
 	}, nil
 }
 
@@ -167,11 +165,11 @@ func (s *pygmalionFetcher) fetchCharacterCard(binder *fetcher.Binder) (*png.Char
 		return nil, err
 	}
 
-	bytes, err := reqx.FetchBody(func() (*req.Response, error) {
-		return s.client.R().
+	bytes, err := reqx.Bytes(
+		s.client.R().
 			SetContentType(reqx.JsonApplicationContentType).
-			Get(fmt.Sprintf(pygmalionCardExportURL, binder.CharacterID))
-	})
+			Get(fmt.Sprintf(pygmalionCardExportURL, binder.CharacterID)),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -216,64 +214,47 @@ func (s *pygmalionFetcher) fetchBookResponses(characterID string) (fetcher.JsonR
 		},
 	)
 
-	bytes, err := reqx.FetchBody(
-		func() (*req.Response, error) {
-			return s.authManager.Do(
-				func(c *req.Client, token string) (*req.Response, error) {
-					return c.R().
-						SetBearerAuthToken(token).
-						SetContentType(reqx.JsonApplicationContentType).
-						SetBody(requestBodyBytes).
-						Post(pygmalionLinkedBookURL)
-				},
-			)
-		},
+	response, err := reqx.String(
+		s.client.AR(s.serviceLabel).
+			SetContentType(reqx.JsonApplicationContentType).
+			SetBody(requestBodyBytes).
+			Post(pygmalionLinkedBookURL),
 	)
 	if err != nil {
-		return sonicx.Of(sonicx.Empty), err
+		return sonicx.Empty, err
 	}
 
-	node, err := sonic.GetFromString(stringsx.FromBytes(bytes))
+	wrap, err := sonic.GetFromString(response)
 	if err != nil {
-		return sonicx.Of(sonicx.Empty), err
+		return sonicx.Empty, err
 	}
 
-	return sonicx.Of(node), nil
+	return sonicx.Of(wrap), nil
 }
 
-func (s *pygmalionFetcher) refreshBearerToken(c *req.Client) (string, error) {
-	identity, err := s.identityReader.Get()
-	if err != nil {
-		return stringsx.Empty, trace.Err().
-			Wrap(err).
-			Field(trace.SOURCE, string(s.sourceID)).
-			Msg("Failed to get credentials")
-	}
-
+func (s *pygmalionFetcher) refreshBearerToken(c *reqx.Client, identity cred.Identity) (string, error) {
 	credentialsMap := map[string]string{
 		pygmalionAuthUsernameField: identity.User,
 		pygmalionAuthPasswordField: identity.Secret,
 	}
 
-	response, err := reqx.FetchBody(
-		func() (*req.Response, error) {
-			return c.R().
-				SetContentType("application/x-www-form-urlencoded").
-				SetHeaders(s.headers).
-				SetFormData(credentialsMap).
-				Post(pygmalionAuthURL)
-		},
+	response, err := reqx.String(
+		c.R().
+			SetContentType("application/x-www-form-urlencoded").
+			SetHeaders(s.headers).
+			SetFormData(credentialsMap).
+			Post(pygmalionAuthURL),
 	)
 	if err != nil {
 		return stringsx.Empty, err
 	}
-	node, err := sonic.GetFromString(stringsx.FromBytes(response), "result", "id_token")
+
+	wrap, err := sonicx.GetFromString(response, "result", "id_token")
 	if err != nil {
 		return stringsx.Empty, err
 	}
-	tokenResponse := sonicx.Of(node).String()
 
-	return tokenResponse, nil
+	return wrap.String(), nil
 }
 
 type pygmalionBook struct {
