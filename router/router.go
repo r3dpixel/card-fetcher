@@ -7,13 +7,12 @@ import (
 
 	gcmp "github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/r3dpixel/card-fetcher/factory"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-fetcher/task"
 	"github.com/r3dpixel/card-parser/property"
+	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/stringsx"
-	"github.com/rs/zerolog/log"
 )
 
 type IntegrationStatus string
@@ -50,32 +49,41 @@ type TaskSlice struct {
 }
 
 type Router struct {
-	factory   factory.Factory
+	client    *reqx.Client
 	fetcherMu sync.RWMutex
 	fetchers  []fetcher.Fetcher
 }
 
-func New(opts factory.Options) *Router {
+func New(opts reqx.Options) *Router {
 	return &Router{
-		factory: factory.New(opts),
+		client: reqx.NewClient(opts),
 	}
 }
 
-func (r *Router) RegisterFetcher(sourceID source.ID) {
+func (r *Router) RegisterFetcher(fetcher fetcher.Fetcher) {
 	r.fetcherMu.Lock()
 	defer r.fetcherMu.Unlock()
 
-	f := r.factory.FetcherOf(sourceID)
-	if f == nil {
-		log.Warn().Msgf("Count not find fetcher for source ID %s", sourceID)
-		return
-	}
-	r.fetchers = append(r.fetchers, f)
+	r.fetchers = append(r.fetchers, fetcher)
 }
 
-func (r *Router) RegisterFetchers(sourceIDs ...source.ID) {
-	for _, sourceID := range sourceIDs {
-		r.RegisterFetcher(sourceID)
+func (r *Router) RegisterFetchers(fetchers ...fetcher.Fetcher) {
+	r.fetcherMu.Lock()
+	defer r.fetcherMu.Unlock()
+
+	r.fetchers = append(r.fetchers, fetchers...)
+}
+
+func (r *Router) RegisterBuilder(builder fetcher.Builder) {
+	r.RegisterFetcher(builder(r.client))
+}
+
+func (r *Router) RegisterBuilders(builders ...fetcher.Builder) {
+	r.fetcherMu.Lock()
+	defer r.fetcherMu.Unlock()
+
+	for _, builder := range builders {
+		r.fetchers = append(r.fetchers, builder(r.client))
 	}
 }
 

@@ -66,6 +66,10 @@ func NewPygmalionFetcher(client *reqx.Client, identityReader cred.IdentityReader
 	return impl
 }
 
+func (s *pygmalionFetcher) Close() {
+	s.client.UnregisterAuth(s.serviceLabel)
+}
+
 func (s *pygmalionFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	requestBodyBytes, _ := sonicx.Config.Marshal(
 		map[string]string{

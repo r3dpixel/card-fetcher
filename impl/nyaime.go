@@ -16,6 +16,8 @@ import (
 	"github.com/r3dpixel/toolkit/sonicx"
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/symbols"
+	"github.com/r3dpixel/toolkit/timestamp"
+	"github.com/r3dpixel/toolkit/trace"
 )
 
 const (
@@ -95,8 +97,8 @@ func (s *nyaiMeFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 		Name:          name,
 		Title:         postNode.Get("Title").String(),
 		Tagline:       postNode.Get("ShortDescription").String(),
-		CreateTime:    s.fromDate(nyaiMeDateFormat, postNode.Get("Date").String(), metadataBinder.NormalizedURL),
-		UpdateTime:    s.fromDate(nyaiMeDateFormat, postNode.Get("EditedDate").String(), metadataBinder.NormalizedURL),
+		CreateTime:    timestamp.ParseF[timestamp.Nano](nyaiMeDateFormat, postNode.Get("Date").String(), trace.URL, metadataBinder.NormalizedURL),
+		UpdateTime:    timestamp.ParseF[timestamp.Nano](nyaiMeDateFormat, postNode.Get("EditedDate").String(), trace.URL, metadataBinder.NormalizedURL),
 		Tags:          tags,
 	}
 

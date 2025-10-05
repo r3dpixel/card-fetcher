@@ -15,6 +15,8 @@ import (
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/slicesx"
 	"github.com/r3dpixel/toolkit/sonicx"
+	"github.com/r3dpixel/toolkit/timestamp"
+	"github.com/r3dpixel/toolkit/trace"
 )
 
 const (
@@ -82,8 +84,8 @@ func (s *characterTavernFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataB
 		Name:          cardNode.Get("inChatName").String(),
 		Title:         cardNode.Get("name").String(),
 		Tagline:       cardNode.Get("tagline").String(),
-		CreateTime:    s.fromDate(characterTavernDateFormat, cardNode.Get("createdAt").String(), metadataBinder.NormalizedURL),
-		UpdateTime:    s.fromDate(characterTavernDateFormat, cardNode.Get("lastUpdatedAt").String(), metadataBinder.NormalizedURL),
+		CreateTime:    timestamp.ParseF[timestamp.Nano](characterTavernDateFormat, cardNode.Get("createdAt").String(), trace.URL, metadataBinder.NormalizedURL),
+		UpdateTime:    timestamp.ParseF[timestamp.Nano](characterTavernDateFormat, cardNode.Get("lastUpdatedAt").String(), trace.URL, metadataBinder.NormalizedURL),
 		Tags:          resolvedTags,
 	}, nil
 }

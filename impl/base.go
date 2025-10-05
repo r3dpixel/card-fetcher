@@ -9,9 +9,6 @@ import (
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/toolkit/reqx"
-	"github.com/r3dpixel/toolkit/timestamp"
-	"github.com/r3dpixel/toolkit/trace"
-	"github.com/rs/zerolog/log"
 )
 
 const ()
@@ -30,7 +27,7 @@ type BaseHandler struct {
 
 func (s *BaseHandler) Extends(top fetcher.Fetcher) {
 	s.Fetcher = top
-	s.computeServiceLabel()
+	s.serviceLabel = fmt.Sprintf("%s::%s", s.Fetcher.SourceID(), uuid.New())
 }
 
 func (s *BaseHandler) SourceID() source.ID {
@@ -80,17 +77,4 @@ func (s *BaseHandler) IsSourceUp() bool {
 	return err == nil
 }
 
-func (s *BaseHandler) computeServiceLabel() {
-	s.serviceLabel = fmt.Sprintf("%s::%s", s.Fetcher.SourceID(), uuid.New())
-}
-
-func (s *BaseHandler) fromDate(format string, date string, url string) timestamp.Nano {
-	t, err := timestamp.Parse[timestamp.Nano](format, date)
-	if err != nil {
-		log.Error().Err(err).
-			Str(trace.SOURCE, string(s.sourceID)).
-			Str(trace.URL, url).
-			Msg("Could not parse timestamp")
-	}
-	return t
-}
+func (s *BaseHandler) Close() {}

@@ -1,10 +1,7 @@
 package main
 
 import (
-	"maps"
-	"slices"
-
-	"github.com/r3dpixel/card-fetcher/factory"
+	"github.com/r3dpixel/card-fetcher/impl"
 	"github.com/r3dpixel/card-fetcher/router"
 	"github.com/r3dpixel/card-fetcher/task"
 	"github.com/r3dpixel/toolkit/cred"
@@ -17,16 +14,15 @@ import (
 func main() {
 	sonicx.Config = sonicx.StableSort
 
-	factoryOpts := factory.Options{
-		ClientOptions:             reqx.Options{},
-		PygmalionIdentityProvider: cred.NewManager("pygmalion", cred.Env),
-	}
-
-	r := router.New(factoryOpts)
+	r := router.New(reqx.Options{})
 	resourceURLs := router.GetResourceURLs()
 
-	sourceIDs := slices.Collect(maps.Keys(resourceURLs))
-	r.RegisterFetchers(sourceIDs...)
+	builders := impl.DefaultBuilders(
+		impl.BuilderOptions{
+			PygmalionIdentityReader: cred.NewManager("pygmalion", cred.Env),
+		},
+	)
+	r.RegisterBuilders(builders...)
 
 	for _, url := range resourceURLs {
 		t, ok := r.TaskOf(url)

@@ -5,8 +5,13 @@ import (
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/png"
+	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/sonicx"
 )
+
+type Builder func(*reqx.Client) Fetcher
+
+type ConfigBuilder[T any] func(*reqx.Client, T) Fetcher
 
 type JsonResponse = *sonicx.Wrap
 
@@ -27,6 +32,13 @@ type Fetcher interface {
 	FetchCreatorInfo(metadataBinder *MetadataBinder) (*models.CreatorInfo, error)
 	FetchBookResponses(metadataBinder *MetadataBinder) (*BookBinder, error)
 	FetchCharacterCard(binder *Binder) (*png.CharacterCard, error)
+	Close()
 
 	IsSourceUp() bool
+}
+
+func BuilderOf[T any](config T, builder ConfigBuilder[T]) Builder {
+	return func(client *reqx.Client) Fetcher {
+		return builder(client, config)
+	}
 }

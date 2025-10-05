@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/r3dpixel/card-fetcher/factory"
+	"github.com/r3dpixel/card-fetcher/impl"
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/router"
 	"github.com/r3dpixel/card-fetcher/source"
@@ -22,16 +22,16 @@ import (
 var testRouter = initTestRouter()
 
 func initTestRouter() *router.Router {
-	r := router.New(factory.Options{
-		ClientOptions: reqx.Options{
+	r := router.New(
+		reqx.Options{
 			RetryCount:    4,
 			MinBackoff:    10 * time.Millisecond,
 			MaxBackoff:    500 * time.Millisecond,
 			Impersonation: reqx.Chrome,
 		},
-		PygmalionIdentityProvider: cred.NewManager("pygmalion", cred.Env),
-	})
-	r.RegisterFetchers(source.All()...)
+	)
+	builders := impl.DefaultBuilders(impl.BuilderOptions{PygmalionIdentityReader: cred.NewManager("pygmalion", cred.Env)})
+	r.RegisterBuilders(builders...)
 	return r
 }
 

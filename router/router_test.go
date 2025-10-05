@@ -1,12 +1,9 @@
 package router
 
 import (
-	"maps"
-	"slices"
 	"testing"
 	"time"
 
-	"github.com/r3dpixel/card-fetcher/factory"
 	"github.com/r3dpixel/card-fetcher/impl"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/toolkit/cred"
@@ -17,47 +14,47 @@ import (
 func TestNew(t *testing.T) {
 	testCases := []struct {
 		name   string
-		opts   factory.Options
+		opts   reqx.Options
 		assert func(t *testing.T, r *Router)
 	}{
 		{
 			name: "Default options",
-			opts: factory.Options{},
+			opts: reqx.Options{},
 			assert: func(t *testing.T, r *Router) {
 				assert.NotNil(t, r)
 			},
 		},
 		{
 			name: "With Retries",
-			opts: factory.Options{ClientOptions: reqx.Options{RetryCount: 5, MinBackoff: 1 * time.Second, MaxBackoff: 5 * time.Second}},
+			opts: reqx.Options{RetryCount: 5, MinBackoff: 1 * time.Second, MaxBackoff: 5 * time.Second},
 			assert: func(t *testing.T, r *Router) {
 				assert.NotNil(t, r)
 			},
 		},
 		{
 			name: "With HTTP3",
-			opts: factory.Options{ClientOptions: reqx.Options{EnableHttp3: true}},
+			opts: reqx.Options{EnableHttp3: true},
 			assert: func(t *testing.T, r *Router) {
 				assert.NotNil(t, r)
 			},
 		},
 		{
 			name: "With Chrome Impersonation",
-			opts: factory.Options{ClientOptions: reqx.Options{Impersonation: reqx.Chrome}},
+			opts: reqx.Options{Impersonation: reqx.Chrome},
 			assert: func(t *testing.T, r *Router) {
 				assert.NotNil(t, r)
 			},
 		},
 		{
 			name: "With Firefox Impersonation",
-			opts: factory.Options{ClientOptions: reqx.Options{Impersonation: reqx.Firefox}},
+			opts: reqx.Options{Impersonation: reqx.Firefox},
 			assert: func(t *testing.T, r *Router) {
 				assert.NotNil(t, r)
 			},
 		},
 		{
 			name: "With Safari Impersonation",
-			opts: factory.Options{ClientOptions: reqx.Options{Impersonation: reqx.Safari}},
+			opts: reqx.Options{Impersonation: reqx.Safari},
 			assert: func(t *testing.T, r *Router) {
 				assert.NotNil(t, r)
 			},
@@ -73,25 +70,24 @@ func TestNew(t *testing.T) {
 }
 
 func TestRouter_RegisterFetchers(t *testing.T) {
-	router := New(factory.Options{})
+	router := New(reqx.Options{})
 
 	siteA := source.ID("site-a")
 	siteB := source.ID("site-b")
 
-	mockF1 := impl.NewMockFetcher(impl.MockConfig{
+	mockFetcher1 := impl.NewMockFetcher(impl.MockConfig{
 		MockSourceID:  siteA,
 		MockMainURL:   "site-a.com/",
 		MockSourceURL: "site-a.com",
 	}, impl.MockData{})
 
-	mockF2 := impl.NewMockFetcher(impl.MockConfig{
+	mockFetcher2 := impl.NewMockFetcher(impl.MockConfig{
 		MockSourceID:  siteB,
 		MockMainURL:   "site-b.org/",
 		MockSourceURL: "site-b.org",
 	}, impl.MockData{})
 
-	// Manually add fetchers since we can't easily mock the factory's FetcherOf method
-	router.fetchers = append(router.fetchers, mockF1, mockF2)
+	router.RegisterFetchers(mockFetcher1, mockFetcher2)
 
 	assert.Len(t, router.fetchers, 2)
 	assert.Len(t, router.Sources(), 2)
@@ -103,7 +99,7 @@ func TestRouter_TaskDispatching(t *testing.T) {
 	siteA := source.ID("site-a")
 	siteB := source.ID("site-b")
 
-	mockF1 := impl.NewMockFetcher(impl.MockConfig{
+	mockFetcher1 := impl.NewMockFetcher(impl.MockConfig{
 		MockSourceID:      siteA,
 		MockSourceURL:     "site-a.com",
 		MockDirectURL:     "direct.site-a.com/",
@@ -111,7 +107,7 @@ func TestRouter_TaskDispatching(t *testing.T) {
 		MockAlternateURLs: []string{},
 	}, impl.MockData{})
 
-	mockF2 := impl.NewMockFetcher(impl.MockConfig{
+	mockFetcher2 := impl.NewMockFetcher(impl.MockConfig{
 		MockSourceID:      siteB,
 		MockSourceURL:     "site-b.com",
 		MockDirectURL:     "direct.site-b.com/",
@@ -119,8 +115,8 @@ func TestRouter_TaskDispatching(t *testing.T) {
 		MockAlternateURLs: []string{},
 	}, impl.MockData{})
 
-	router := New(factory.Options{})
-	router.fetchers = append(router.fetchers, mockF1, mockF2)
+	router := New(reqx.Options{})
+	router.RegisterFetchers(mockFetcher1, mockFetcher2)
 
 	t.Run("TaskOf", func(t *testing.T) {
 		t.Run("Finds correct fetcher", func(t *testing.T) {
@@ -173,15 +169,15 @@ func TestRouter_TaskDispatching(t *testing.T) {
 }
 
 func TestRouter_Integrations(t *testing.T) {
-	r := New(factory.Options{
-		ClientOptions: reqx.Options{
-			RetryCount:    3,
-			Impersonation: reqx.Chrome,
-		},
-		PygmalionIdentityProvider: cred.NewManager("pygmalion", cred.Env),
+	r := New(reqx.Options{
+		RetryCount:    3,
+		Impersonation: reqx.Chrome,
 	})
-	sourceIDs := slices.Collect(maps.Keys(GetResourceURLs()))
-	r.RegisterFetchers(sourceIDs...)
+
+	// Register all default fetchers
+	builders := impl.DefaultBuilders(impl.BuilderOptions{PygmalionIdentityReader: cred.NewManager("pygmalion", cred.Env)})
+	r.RegisterBuilders(builders...)
+
 	result := r.CheckIntegrations()
 	for sourceID, status := range result {
 		assert.Equal(t, status, IntegrationSuccess, "Integrations failed for %s", sourceID)

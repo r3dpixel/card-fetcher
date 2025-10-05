@@ -17,6 +17,7 @@ import (
 	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/r3dpixel/toolkit/symbols"
 	"github.com/r3dpixel/toolkit/timestamp"
+	"github.com/r3dpixel/toolkit/trace"
 )
 
 const (
@@ -35,8 +36,8 @@ type wyvernChatFetcher struct {
 	BaseHandler
 }
 
-// WyvernChatHandler - Create a new WyvernChat source
-func WyvernChatHandler(client *reqx.Client) fetcher.Fetcher {
+// NewWyvernChatFetcher - Create a new WyvernChat source
+func NewWyvernChatFetcher(client *reqx.Client) fetcher.Fetcher {
 	impl := &wyvernChatFetcher{
 		BaseHandler: BaseHandler{
 			client:    client,
@@ -69,8 +70,8 @@ func (s *wyvernChatFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder
 		Name:          metadataBinder.Get("chat_name").String(),
 		Title:         metadataBinder.Get("name").String(),
 		Tagline:       metadataBinder.Get("tagline").String(),
-		CreateTime:    s.fromDate(wyvernDateFormat, metadataBinder.Get("created_at").String(), metadataBinder.NormalizedURL),
-		UpdateTime:    s.fromDate(wyvernDateFormat, metadataBinder.Get("updated_at").String(), metadataBinder.NormalizedURL),
+		CreateTime:    timestamp.ParseF[timestamp.Nano](wyvernDateFormat, metadataBinder.Get("created_at").String(), trace.URL, metadataBinder.NormalizedURL),
+		UpdateTime:    timestamp.ParseF[timestamp.Nano](wyvernDateFormat, metadataBinder.Get("updated_at").String(), trace.URL, metadataBinder.NormalizedURL),
 		Tags:          models.TagsFromJsonArray(metadataBinder.Get("tags"), sonicx.WrapString),
 	}, nil
 }
@@ -90,7 +91,10 @@ func (s *wyvernChatFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataB
 	lorebooksNode := metadataBinder.Get("lorebooks")
 	array, _ := lorebooksNode.ArrayUseNode()
 	for _, lorebookNode := range array {
-		bookUpdateTime = max(bookUpdateTime, s.fromDate(wyvernDateFormat, sonicx.Of(lorebookNode).Get("updated_at").String(), metadataBinder.NormalizedURL))
+		bookUpdateTime = max(
+			bookUpdateTime,
+			timestamp.ParseF[timestamp.Nano](wyvernDateFormat, sonicx.Of(lorebookNode).Get("updated_at").String(), trace.URL, metadataBinder.NormalizedURL),
+		)
 	}
 	return &fetcher.BookBinder{
 		UpdateTime: bookUpdateTime,

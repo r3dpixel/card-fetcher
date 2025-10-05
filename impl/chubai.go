@@ -87,8 +87,8 @@ func (s *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 		Name:          definitionNode.Get("name").String(),
 		Title:         node.Get("name").String(),
 		Tagline:       node.Get("tagline").String(),
-		CreateTime:    s.fromDate(chubAiDateFormat, node.Get("createdAt").String(), metadataBinder.NormalizedURL),
-		UpdateTime:    s.fromDate(chubAiDateFormat, node.Get("lastActivityAt").String(), metadataBinder.NormalizedURL),
+		CreateTime:    timestamp.ParseF[timestamp.Nano](chubAiDateFormat, node.Get("createdAt").String(), trace.URL, metadataBinder.NormalizedURL),
+		UpdateTime:    timestamp.ParseF[timestamp.Nano](chubAiDateFormat, node.Get("lastActivityAt").String(), trace.URL, metadataBinder.NormalizedURL),
 		Tags:          models.TagsFromJsonArray(node.Get("topics"), sonicx.WrapString),
 	}, nil
 }
@@ -287,7 +287,7 @@ func (s *chubAIFetcher) retrieveBookData(metadataBinder *fetcher.MetadataBinder,
 		return sonicx.Empty, 0, false
 	}
 
-	updateTime := s.fromDate(chubAiDateFormat, wrap.GetByPath("node", "lastActivityAt").String(), metadataBinder.DirectURL)
+	updateTime := timestamp.ParseF[timestamp.Nano](chubAiDateFormat, wrap.GetByPath("node", "lastActivityAt").String(), trace.URL, metadataBinder.DirectURL)
 	return wrap, updateTime, true
 }
 

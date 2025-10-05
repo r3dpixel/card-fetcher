@@ -12,6 +12,8 @@ import (
 	"github.com/r3dpixel/card-parser/property"
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/sonicx"
+	"github.com/r3dpixel/toolkit/timestamp"
+	"github.com/r3dpixel/toolkit/trace"
 )
 
 const (
@@ -72,8 +74,8 @@ func (s *pephopFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 		Name:          cardName,
 		Title:         cardName,
 		Tagline:       metadataBinder.Get("description").String(),
-		CreateTime:    s.fromDate(pepHopDateFormat, metadataBinder.Get("created_at").String(), metadataBinder.NormalizedURL),
-		UpdateTime:    s.fromDate(pepHopDateFormat, metadataBinder.Get("updated_at").String(), metadataBinder.NormalizedURL),
+		CreateTime:    timestamp.ParseF[timestamp.Nano](pepHopDateFormat, metadataBinder.Get("created_at").String(), trace.URL, metadataBinder.NormalizedURL),
+		UpdateTime:    timestamp.ParseF[timestamp.Nano](pepHopDateFormat, metadataBinder.Get("updated_at").String(), trace.URL, metadataBinder.NormalizedURL),
 		Tags:          tags,
 	}
 
