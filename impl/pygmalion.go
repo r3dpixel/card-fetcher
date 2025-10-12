@@ -38,12 +38,13 @@ const (
 	pygmalionLinkedBookURL = "https://server.pygmalion.chat/galatea.v1.UserLorebookService/LorebooksByCharacterId" // Book Download NormalizedURL for Pygmalion
 )
 
-type PygmalionBuilder struct {
+type PygmalionOpts struct {
 	IdentityReader cred.IdentityReader
 }
+type PygmalionBuilder PygmalionOpts
 
 func (b PygmalionBuilder) Build(client *reqx.Client) fetcher.Fetcher {
-	return NewPygmalionFetcher(client, b.IdentityReader)
+	return NewPygmalionFetcher(client, PygmalionOpts(b))
 }
 
 type pygmalionFetcher struct {
@@ -52,7 +53,7 @@ type pygmalionFetcher struct {
 }
 
 // NewPygmalionFetcher - Create a new ChubAI source
-func NewPygmalionFetcher(client *reqx.Client, identityReader cred.IdentityReader) fetcher.Fetcher {
+func NewPygmalionFetcher(client *reqx.Client, opts PygmalionOpts) fetcher.Fetcher {
 	impl := &pygmalionFetcher{
 		headers: map[string]string{
 			"Referer": pygmalionReferer,
@@ -69,7 +70,7 @@ func NewPygmalionFetcher(client *reqx.Client, identityReader cred.IdentityReader
 		},
 	}
 	impl.Extends(impl)
-	impl.client.RegisterAuth(impl.serviceLabel, identityReader, impl.refreshBearerToken)
+	impl.client.RegisterAuth(impl.serviceLabel, opts.IdentityReader, impl.refreshBearerToken)
 
 	return impl
 }
