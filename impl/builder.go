@@ -15,7 +15,7 @@ func DefaultBuilders(opts BuilderOptions) []fetcher.Builder {
 		ChubAIBuilder{},
 		NyaiMeBuilder{},
 		PephopBuilder{},
-		PygmalionBuilder{opts.PygmalionIdentityReader},
+		PygmalionBuilder{IdentityReader: opts.PygmalionIdentityReader},
 		WyvernChatBuilder{},
 	}
 }
