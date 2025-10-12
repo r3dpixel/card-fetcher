@@ -38,8 +38,16 @@ const (
 	pygmalionLinkedBookURL = "https://server.pygmalion.chat/galatea.v1.UserLorebookService/LorebooksByCharacterId" // Book Download NormalizedURL for Pygmalion
 )
 
+type PygmalionBuilder struct {
+	IdentityReader cred.IdentityReader
+}
+
+func (b PygmalionBuilder) Build(client *reqx.Client) fetcher.Fetcher {
+	return NewPygmalionFetcher(client, b.IdentityReader)
+}
+
 type pygmalionFetcher struct {
-	BaseHandler
+	BaseFetcher
 	headers map[string]string
 }
 
@@ -51,7 +59,7 @@ func NewPygmalionFetcher(client *reqx.Client, identityReader cred.IdentityReader
 			"Origin":  pygmalionOrigin,
 			"Host":    pygmalionHost,
 		},
-		BaseHandler: BaseHandler{
+		BaseFetcher: BaseFetcher{
 			client:    client,
 			sourceID:  source.Pygmalion,
 			sourceURL: pygmalionSourceURL,
@@ -84,7 +92,7 @@ func (s *pygmalionFetcher) FetchMetadataResponse(characterID string) (*req.Respo
 
 func (s *pygmalionFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
 	newCharacterID := metadataResponse.GetByPath("character", "id").String()
-	return s.BaseHandler.CreateBinder(newCharacterID, metadataResponse)
+	return s.BaseFetcher.CreateBinder(newCharacterID, metadataResponse)
 }
 
 func (s *pygmalionFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {

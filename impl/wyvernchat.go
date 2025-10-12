@@ -32,14 +32,20 @@ const (
 	wyvernBookExtensionsField string = "extensions" // Extensions field for WyvernChat Book
 )
 
+type WyvernChatBuilder struct{}
+
+func (b WyvernChatBuilder) Build(client *reqx.Client) fetcher.Fetcher {
+	return NewWyvernChatFetcher(client)
+}
+
 type wyvernChatFetcher struct {
-	BaseHandler
+	BaseFetcher
 }
 
 // NewWyvernChatFetcher - Create a new WyvernChat source
 func NewWyvernChatFetcher(client *reqx.Client) fetcher.Fetcher {
 	impl := &wyvernChatFetcher{
-		BaseHandler: BaseHandler{
+		BaseFetcher: BaseFetcher{
 			client:    client,
 			sourceID:  source.WyvernChat,
 			sourceURL: wyvernSourceURL,
@@ -58,7 +64,7 @@ func (s *wyvernChatFetcher) FetchMetadataResponse(characterID string) (*req.Resp
 }
 
 func (s *wyvernChatFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
-	return s.BaseHandler.CreateBinder(metadataResponse.Get("id").String(), metadataResponse)
+	return s.BaseFetcher.CreateBinder(metadataResponse.Get("id").String(), metadataResponse)
 }
 
 func (s *wyvernChatFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {

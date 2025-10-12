@@ -33,15 +33,21 @@ const (
 	nyaiMeDateFormat string = time.RFC3339Nano // Date Format for NyaiMe
 )
 
+type NyaiMeBuilder struct{}
+
+func (b NyaiMeBuilder) Build(client *reqx.Client) fetcher.Fetcher {
+	return NewNyaiMeFetcher(client)
+}
+
 type nyaiMeFetcher struct {
-	BaseHandler
+	BaseFetcher
 	headers map[string]string
 }
 
 // NewNyaiMeFetcher - Create a new NyaiMe source
 func NewNyaiMeFetcher(client *reqx.Client) fetcher.Fetcher {
 	impl := &nyaiMeFetcher{
-		BaseHandler: BaseHandler{
+		BaseFetcher: BaseFetcher{
 			client:    client,
 			sourceID:  source.NyaiMe,
 			sourceURL: nyaiMeSourceURL,

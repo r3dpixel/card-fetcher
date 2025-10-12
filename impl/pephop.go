@@ -27,14 +27,20 @@ const (
 	pepHopDateFormat string = time.RFC3339Nano // Date Format for PepHop
 )
 
+type PephopBuilder struct{}
+
+func (b PephopBuilder) Build(client *reqx.Client) fetcher.Fetcher {
+	return NewPephopFetcher(client)
+}
+
 type pephopFetcher struct {
-	BaseHandler
+	BaseFetcher
 }
 
 // NewPephopFetcher - Create a new ChubAI source
 func NewPephopFetcher(client *reqx.Client) fetcher.Fetcher {
 	impl := &pephopFetcher{
-		BaseHandler: BaseHandler{
+		BaseFetcher: BaseFetcher{
 			client:    client,
 			sourceID:  source.PepHop,
 			sourceURL: pephopSourceURL,
@@ -53,7 +59,7 @@ func (s *pephopFetcher) FetchMetadataResponse(characterID string) (*req.Response
 }
 
 func (s *pephopFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
-	return s.BaseHandler.CreateBinder(metadataResponse.Get("id").String(), metadataResponse)
+	return s.BaseFetcher.CreateBinder(metadataResponse.Get("id").String(), metadataResponse)
 }
 
 func (s *pephopFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
@@ -129,5 +135,5 @@ func (s *pephopFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.Charact
 // CharacterID - returns the characterID for pephop source
 // For PepHop the suffix must be trimmed to leave just the real Slug
 func (s *pephopFetcher) CharacterID(url string, matchedURL string) string {
-	return s.BaseHandler.CharacterID(url, matchedURL)[0:pephopUuidLength]
+	return s.BaseFetcher.CharacterID(url, matchedURL)[0:pephopUuidLength]
 }

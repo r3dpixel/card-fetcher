@@ -11,11 +11,11 @@ type BuilderOptions struct {
 
 func DefaultBuilders(opts BuilderOptions) []fetcher.Builder {
 	return []fetcher.Builder{
-		NewCharacterTavernFetcher,
-		NewChubAIFetcher,
-		NewNyaiMeFetcher,
-		NewPephopFetcher,
-		fetcher.BuilderOf(opts.PygmalionIdentityReader, NewPygmalionFetcher),
-		NewWyvernChatFetcher,
+		CharacterTavernBuilder{},
+		ChubAIBuilder{},
+		NyaiMeBuilder{},
+		PephopBuilder{},
+		PygmalionBuilder{opts.PygmalionIdentityReader},
+		WyvernChatBuilder{},
 	}
 }

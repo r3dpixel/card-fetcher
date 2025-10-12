@@ -9,9 +9,9 @@ import (
 	"github.com/r3dpixel/toolkit/sonicx"
 )
 
-type Builder func(*reqx.Client) Fetcher
-
-type ConfigBuilder[T any] func(*reqx.Client, T) Fetcher
+type Builder interface {
+	Build(client *reqx.Client) Fetcher
+}
 
 type JsonResponse = *sonicx.Wrap
 
@@ -35,10 +35,4 @@ type Fetcher interface {
 	Close()
 
 	IsSourceUp() bool
-}
-
-func BuilderOf[T any](config T, builder ConfigBuilder[T]) Builder {
-	return func(client *reqx.Client) Fetcher {
-		return builder(client, config)
-	}
 }

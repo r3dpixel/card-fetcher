@@ -46,14 +46,20 @@ var (
 	bookRegexp = regexp.MustCompile(`lorebooks/([^"\s<>()]+)`)
 )
 
+type ChubAIBuilder struct{}
+
+func (b ChubAIBuilder) Build(client *reqx.Client) fetcher.Fetcher {
+	return NewChubAIFetcher(client)
+}
+
 type chubAIFetcher struct {
-	BaseHandler
+	BaseFetcher
 }
 
 // NewChubAIFetcher - Create a new ChubAI source
 func NewChubAIFetcher(client *reqx.Client) fetcher.Fetcher {
 	impl := &chubAIFetcher{
-		BaseHandler: BaseHandler{
+		BaseFetcher: BaseFetcher{
 			client:    client,
 			sourceID:  source.ChubAI,
 			sourceURL: chubSourceURL,
@@ -72,7 +78,7 @@ func (s *chubAIFetcher) FetchMetadataResponse(characterID string) (*req.Response
 }
 
 func (s *chubAIFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
-	return s.BaseHandler.CreateBinder(metadataResponse.GetByPath("node", "fullPath").String(), metadataResponse)
+	return s.BaseFetcher.CreateBinder(metadataResponse.GetByPath("node", "fullPath").String(), metadataResponse)
 }
 
 func (s *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {

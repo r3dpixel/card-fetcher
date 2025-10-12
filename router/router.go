@@ -75,7 +75,7 @@ func (r *Router) RegisterFetchers(fetchers ...fetcher.Fetcher) {
 }
 
 func (r *Router) RegisterBuilder(builder fetcher.Builder) {
-	r.RegisterFetcher(builder(r.client))
+	r.RegisterFetcher(builder.Build(r.client))
 }
 
 func (r *Router) RegisterBuilders(builders ...fetcher.Builder) {
@@ -83,7 +83,7 @@ func (r *Router) RegisterBuilders(builders ...fetcher.Builder) {
 	defer r.fetcherMu.Unlock()
 
 	for _, builder := range builders {
-		r.fetchers = append(r.fetchers, builder(r.client))
+		r.fetchers = append(r.fetchers, builder.Build(r.client))
 	}
 }
 

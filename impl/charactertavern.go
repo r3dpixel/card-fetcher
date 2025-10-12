@@ -32,14 +32,20 @@ const (
 
 )
 
+type CharacterTavernBuilder struct{}
+
+func (b CharacterTavernBuilder) Build(client *reqx.Client) fetcher.Fetcher {
+	return NewCharacterTavernFetcher(client)
+}
+
 type characterTavernFetcher struct {
-	BaseHandler
+	BaseFetcher
 }
 
 // NewCharacterTavernFetcher - Create a new CharacterTavern source
 func NewCharacterTavernFetcher(client *reqx.Client) fetcher.Fetcher {
 	impl := &characterTavernFetcher{
-		BaseHandler: BaseHandler{
+		BaseFetcher: BaseFetcher{
 			client:    client,
 			sourceID:  source.CharacterTavern,
 			sourceURL: characterTavernSourceURL,
@@ -59,7 +65,7 @@ func (s *characterTavernFetcher) FetchMetadataResponse(characterID string) (*req
 }
 
 func (s *characterTavernFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
-	return s.BaseHandler.CreateBinder(metadataResponse.GetByPath("card", "path").String(), metadataResponse)
+	return s.BaseFetcher.CreateBinder(metadataResponse.GetByPath("card", "path").String(), metadataResponse)
 }
 
 func (s *characterTavernFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
@@ -150,5 +156,5 @@ func (s *characterTavernFetcher) CharacterID(cardURL string, matchedURL string) 
 	}
 
 	// Extract characterID
-	return s.BaseHandler.CharacterID(sanitizedURL, matchedURL)
+	return s.BaseFetcher.CharacterID(sanitizedURL, matchedURL)
 }

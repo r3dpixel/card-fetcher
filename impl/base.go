@@ -11,10 +11,18 @@ import (
 	"github.com/r3dpixel/toolkit/reqx"
 )
 
-const ()
+type BaseConfig struct {
+	ServiceLabel string
+	Client       *reqx.Client
+	SourceID     source.ID
+	SourceURL    string
+	DirectURL    string
+	MainURL      string
+	BaseURLs     []string
+}
 
-// BaseHandler - Embeddable struct for creating a new source
-type BaseHandler struct {
+// BaseFetcher - Embeddable struct for creating a new source
+type BaseFetcher struct {
 	fetcher.Fetcher
 	serviceLabel string
 	client       *reqx.Client
@@ -25,41 +33,54 @@ type BaseHandler struct {
 	baseURLs     []string
 }
 
-func (s *BaseHandler) Extends(top fetcher.Fetcher) {
+// NewBaseFetcher Creates a new BaseFetcher
+func NewBaseFetcher(config BaseConfig) BaseFetcher {
+	return BaseFetcher{
+		serviceLabel: config.ServiceLabel,
+		client:       config.Client,
+		sourceID:     config.SourceID,
+		sourceURL:    config.SourceURL,
+		directURL:    config.DirectURL,
+		mainURL:      config.MainURL,
+		baseURLs:     config.BaseURLs,
+	}
+}
+
+func (s *BaseFetcher) Extends(top fetcher.Fetcher) {
 	s.Fetcher = top
 	s.serviceLabel = fmt.Sprintf("%s::%s", s.Fetcher.SourceID(), uuid.New())
 }
 
-func (s *BaseHandler) SourceID() source.ID {
+func (s *BaseFetcher) SourceID() source.ID {
 	return s.sourceID
 }
 
-func (s *BaseHandler) SourceURL() string {
+func (s *BaseFetcher) SourceURL() string {
 	return s.sourceURL
 }
 
-func (s *BaseHandler) MainURL() string {
+func (s *BaseFetcher) MainURL() string {
 	return s.mainURL
 }
 
-func (s *BaseHandler) BaseURLs() []string {
+func (s *BaseFetcher) BaseURLs() []string {
 	return s.baseURLs
 }
 
-func (s *BaseHandler) CharacterID(url string, matchedURL string) string {
+func (s *BaseFetcher) CharacterID(url string, matchedURL string) string {
 	tokens := strings.Split(url, matchedURL)
 	return tokens[len(tokens)-1]
 }
 
-func (s *BaseHandler) DirectURL(characterID string) string {
+func (s *BaseFetcher) DirectURL(characterID string) string {
 	return path.Join(s.directURL, characterID)
 }
 
-func (s *BaseHandler) NormalizeURL(characterID string) string {
+func (s *BaseFetcher) NormalizeURL(characterID string) string {
 	return path.Join(s.Fetcher.MainURL(), characterID)
 }
 
-func (s *BaseHandler) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+func (s *BaseFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
 	return &fetcher.MetadataBinder{
 		CharacterID:   characterID,
 		NormalizedURL: s.Fetcher.NormalizeURL(characterID),
@@ -68,13 +89,13 @@ func (s *BaseHandler) CreateBinder(characterID string, metadataResponse fetcher.
 	}, nil
 }
 
-func (s *BaseHandler) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
+func (s *BaseFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
 	return &fetcher.EmptyBookBinder, nil
 }
 
-func (s *BaseHandler) IsSourceUp() bool {
+func (s *BaseFetcher) IsSourceUp() bool {
 	_, err := s.client.R().Get("https://" + s.sourceURL)
 	return err == nil
 }
 
-func (s *BaseHandler) Close() {}
+func (s *BaseFetcher) Close() {}

@@ -6,7 +6,17 @@ import (
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/png"
+	"github.com/r3dpixel/toolkit/reqx"
 )
+
+type MockBuilder struct {
+	MockConfig
+	MockData
+}
+
+func (b MockBuilder) Build(client *reqx.Client) fetcher.Fetcher {
+	return NewMockFetcher(b.MockConfig, b.MockData)
+}
 
 type MockConfig struct {
 	MockSourceID      source.ID
@@ -29,13 +39,13 @@ type MockData struct {
 }
 
 type mockFetcher struct {
-	BaseHandler
+	BaseFetcher
 	MockData MockData
 }
 
 func NewMockFetcher(config MockConfig, mockData MockData) fetcher.Fetcher {
 	f := &mockFetcher{
-		BaseHandler: BaseHandler{
+		BaseFetcher: BaseFetcher{
 			client:    nil,
 			sourceID:  config.MockSourceID,
 			sourceURL: config.MockSourceURL,
