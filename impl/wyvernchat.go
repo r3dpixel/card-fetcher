@@ -18,6 +18,7 @@ import (
 	"github.com/r3dpixel/toolkit/symbols"
 	"github.com/r3dpixel/toolkit/timestamp"
 	"github.com/r3dpixel/toolkit/trace"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -149,7 +150,24 @@ type wyvernSheet struct {
 	Commands     []any             `json:"commands"`
 	Personas     []any             `json:"personas"`
 	Lexicon      []wyvernBookEntry `json:"lexicon"`
-	Lorebooks    []wyvernBook      `json:"lorebooks"`
+	Lorebooks    wyvernLoreBooks   `json:"lorebooks"`
+}
+
+type wyvernLoreBooks []wyvernBook
+
+func (w *wyvernLoreBooks) UnmarshalJSON(data []byte) error {
+	var arr []wyvernBook
+	if err := sonicx.Config.Unmarshal(data, &arr); err != nil {
+		dataLen := len(data)
+		if dataLen > 256 {
+			dataLen = 256
+		}
+		log.Error().Err(err).Str("data", string(data[:dataLen])).Msg("could not parse lorebooks")
+		*w = nil
+		return nil
+	}
+	*w = arr
+	return nil
 }
 
 func (w *wyvernSheet) fillIn(sheet *character.Sheet) {

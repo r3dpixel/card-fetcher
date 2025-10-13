@@ -76,3 +76,20 @@ func TestWyvernChatImport_MultiLoreBook(t *testing.T) {
 		Consistent().
 		AssertImage()
 }
+
+func TestWyvernChatImport_MalformedLoreBook(t *testing.T) {
+	t.Parallel()
+
+	const creator = "Zootopiabest"
+	url := "https://app.wyvern.chat/characters/_fgFkgNeGtQEf6k7PQzkXw"
+
+	FetchAndAssert(t, url).
+		AssertNoErr().
+		SheetNoCharacterBook().
+		NormalizedURL("wyvern.chat/characters/_fgFkgNeGtQEf6k7PQzkXw").
+		DirectURL("app.wyvern.chat/characters/_fgFkgNeGtQEf6k7PQzkXw").
+		CharacterID("_fgFkgNeGtQEf6k7PQzkXw").
+		CharacterPlatformID("fgFkgNeGtQEf6k7PQzkXw").
+		Consistent().
+		AssertImage()
+}
