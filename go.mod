@@ -8,8 +8,8 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/imroc/req/v3 v3.55.0
-	github.com/r3dpixel/card-parser v0.6.105
-	github.com/r3dpixel/toolkit v0.6.105
+	github.com/r3dpixel/card-parser v0.6.107
+	github.com/r3dpixel/toolkit v0.6.107
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
@@ -43,7 +43,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.55.0 // indirect
-	github.com/refraction-networking/utls v1.8.0 // indirect
+	github.com/refraction-networking/utls v1.8.1 // indirect
 	github.com/sunshineplan/imgconv v1.1.14 // indirect
 	github.com/sunshineplan/pdf v1.0.8 // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect

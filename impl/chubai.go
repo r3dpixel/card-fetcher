@@ -150,7 +150,7 @@ func (s *chubAIFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.Charact
 	}
 	definitionNode := node.Get("definition")
 
-	if err := s.updateFieldsWithFallback(characterCard, binder, definitionNode); err != nil {
+	if err := s.updateFieldsWithFallback(characterCard, definitionNode); err != nil {
 		return nil, err
 	}
 
@@ -191,7 +191,7 @@ func (s *chubAIFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.Charact
 	return characterCard, nil
 }
 
-func (s *chubAIFetcher) updateFieldsWithFallback(characterCard *png.CharacterCard, binder *fetcher.Binder, definitionNode fetcher.JsonResponse) error {
+func (s *chubAIFetcher) updateFieldsWithFallback(characterCard *png.CharacterCard, definitionNode fetcher.JsonResponse) error {
 	characterCard.Description.SetIf(definitionNode.Get("personality").String())
 	characterCard.Personality.SetIf(definitionNode.Get("tavern_personality").String())
 	characterCard.Scenario.SetIf(definitionNode.Get("scenario").String())
