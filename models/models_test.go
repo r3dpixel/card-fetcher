@@ -233,7 +233,7 @@ func TestMetadata_IsConsistentWith(t *testing.T) {
 			card.CharacterBook = nil
 			metadata.BookUpdateTime = 0
 			// Need to adjust modification time since LatestUpdateTime() will now return UpdateTime instead of BookUpdateTime
-			card.Content.ModificationDate = timestamp.Convert[timestamp.Seconds](metadata.UpdateTime)
+			card.Content.ModificationDate = timestamp.ConvertToSeconds(metadata.UpdateTime)
 
 			assert.True(t, metadata.IsConsistentWith(card), "Should be consistent when no character book and BookUpdateTime is zero")
 		})
@@ -243,7 +243,7 @@ func TestMetadata_IsConsistentWith(t *testing.T) {
 			card.CharacterBook = nil
 
 			metadata.BookUpdateTime = 0
-			card.ModificationDate = timestamp.Convert[timestamp.Seconds](metadata.UpdateTime)
+			card.ModificationDate = timestamp.ConvertToSeconds(metadata.UpdateTime)
 
 			assert.True(t, metadata.IsConsistentWith(card), "Should be consistent - condition allows zero BookUpdateTime when no character book")
 		})

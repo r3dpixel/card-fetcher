@@ -24,7 +24,8 @@ func TestWyvernChatImport(t *testing.T) {
 		Title("Test").
 		Tagline("Tagline").
 		CreateTime(1737813581781000000).
-		UpdateTime(1759046051628000000).
+		UpdateTime(1760883234052000000).
+		IsForked(false).
 		TagNames("Female", "Prose").
 		Nickname("WindWave").
 		Username("WindWave").
@@ -73,6 +74,7 @@ func TestWyvernChatImport_MultiLoreBook(t *testing.T) {
 		DirectURL("app.wyvern.chat/characters/_MBnL8cfMUVNFVTBe4GNm4").
 		CharacterID("_MBnL8cfMUVNFVTBe4GNm4").
 		CharacterPlatformID("MBnL8cfMUVNFVTBe4GNm4").
+		IsForked(false).
 		Consistent().
 		AssertImage()
 }
@@ -90,6 +92,25 @@ func TestWyvernChatImport_MalformedLoreBook(t *testing.T) {
 		DirectURL("app.wyvern.chat/characters/_fgFkgNeGtQEf6k7PQzkXw").
 		CharacterID("_fgFkgNeGtQEf6k7PQzkXw").
 		CharacterPlatformID("fgFkgNeGtQEf6k7PQzkXw").
+		IsForked(false).
+		Consistent().
+		AssertImage()
+}
+
+func TestWyvernChatImport_Fork(t *testing.T) {
+
+	t.Parallel()
+
+	const creator = "WindWave"
+	url := "https://app.wyvern.chat/characters/_fNYCnamezeEF431UerxqN"
+
+	FetchAndAssert(t, url).
+		AssertNoErr().
+		NormalizedURL("wyvern.chat/characters/_fNYCnamezeEF431UerxqN").
+		DirectURL("app.wyvern.chat/characters/_fNYCnamezeEF431UerxqN").
+		CharacterID("_fNYCnamezeEF431UerxqN").
+		CharacterPlatformID("fNYCnamezeEF431UerxqN").
+		IsForked(true).
 		Consistent().
 		AssertImage()
 }

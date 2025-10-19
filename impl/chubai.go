@@ -85,6 +85,10 @@ func (s *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 	node := metadataBinder.Get("node")
 	definitionNode := node.Get("definition")
 
+	forked := sonicx.ArrayToSlice(node.Get("labels"), func(s string) bool { return strings.ToLower(s) == "forked" }, func(wrap *sonicx.Wrap) string {
+		return wrap.Get("title").String()
+	})
+
 	return &models.CardInfo{
 		NormalizedURL: metadataBinder.NormalizedURL,
 		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
@@ -93,8 +97,9 @@ func (s *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 		Name:          definitionNode.Get("name").String(),
 		Title:         node.Get("name").String(),
 		Tagline:       node.Get("tagline").String(),
-		CreateTime:    timestamp.ParseF[timestamp.Nano](chubAiDateFormat, node.Get("createdAt").String(), trace.URL, metadataBinder.NormalizedURL),
-		UpdateTime:    timestamp.ParseF[timestamp.Nano](chubAiDateFormat, node.Get("lastActivityAt").String(), trace.URL, metadataBinder.NormalizedURL),
+		CreateTime:    timestamp.ParseF(chubAiDateFormat, node.Get("createdAt").String(), trace.URL, metadataBinder.NormalizedURL),
+		UpdateTime:    timestamp.ParseF(chubAiDateFormat, node.Get("lastActivityAt").String(), trace.URL, metadataBinder.NormalizedURL),
+		IsForked:      len(forked) > 0,
 		Tags:          models.TagsFromJsonArray(node.Get("topics"), sonicx.WrapString),
 	}, nil
 }
@@ -211,13 +216,7 @@ func (s *chubAIFetcher) updateFieldsWithFallback(characterCard *png.CharacterCar
 }
 
 func (s *chubAIFetcher) retrieveCardData(cardURL string, backupURL string) (*png.CharacterCard, error) {
-	rawCard, err := png.FromURL(s.client, cardURL).LastVersion().Get()
-	if err != nil {
-		rawCard, err = png.FromURL(s.client, s.fixAvatarURL(cardURL)).LastVersion().Get()
-	}
-	if err != nil {
-		rawCard, err = png.FromURL(s.client, backupURL).LastVersion().Get()
-	}
+	rawCard, err := png.FromURL(s.client, cardURL, s.fixAvatarURL(cardURL), backupURL).LastVersion().Get()
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +292,7 @@ func (s *chubAIFetcher) retrieveBookData(metadataBinder *fetcher.MetadataBinder,
 		return sonicx.Empty, 0, false
 	}
 
-	updateTime := timestamp.ParseF[timestamp.Nano](chubAiDateFormat, wrap.GetByPath("node", "lastActivityAt").String(), trace.URL, metadataBinder.DirectURL)
+	updateTime := timestamp.ParseF(chubAiDateFormat, wrap.GetByPath("node", "lastActivityAt").String(), trace.URL, metadataBinder.DirectURL)
 	return wrap, updateTime, true
 }
 

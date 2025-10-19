@@ -80,8 +80,9 @@ func (s *pephopFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 		Name:          cardName,
 		Title:         cardName,
 		Tagline:       metadataBinder.Get("description").String(),
-		CreateTime:    timestamp.ParseF[timestamp.Nano](pepHopDateFormat, metadataBinder.Get("created_at").String(), trace.URL, metadataBinder.NormalizedURL),
-		UpdateTime:    timestamp.ParseF[timestamp.Nano](pepHopDateFormat, metadataBinder.Get("updated_at").String(), trace.URL, metadataBinder.NormalizedURL),
+		CreateTime:    timestamp.ParseF(pepHopDateFormat, metadataBinder.Get("created_at").String(), trace.URL, metadataBinder.NormalizedURL),
+		UpdateTime:    timestamp.ParseF(pepHopDateFormat, metadataBinder.Get("updated_at").String(), trace.URL, metadataBinder.NormalizedURL),
+		IsForked:      false,
 		Tags:          tags,
 	}
 

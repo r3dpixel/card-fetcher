@@ -22,6 +22,7 @@ func TestNyaiMeImport(t *testing.T) {
 		Tagline("Test").
 		CreateTime(1737826389292081000).
 		UpdateTime(1737826389292081000).
+		IsForked(false).
 		TagNames("Female").
 		Nickname("cutie2").
 		Username("cutie2").

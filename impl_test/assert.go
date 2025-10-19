@@ -176,6 +176,11 @@ func (ca *CharacterAssertion) BookUpdateTime(expected int64) *CharacterAssertion
 	return ca
 }
 
+func (ca *CharacterAssertion) IsForked(expected bool) *CharacterAssertion {
+	assert.Equal(ca.t, expected, ca.metadata.IsForked)
+	return ca
+}
+
 func (ca *CharacterAssertion) SheetName(expected string) *CharacterAssertion {
 	assert.Equal(ca.t, expected, string(ca.sheet.Name))
 	return ca

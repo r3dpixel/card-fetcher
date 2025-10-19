@@ -90,8 +90,9 @@ func (s *characterTavernFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataB
 		Name:          cardNode.Get("inChatName").String(),
 		Title:         cardNode.Get("name").String(),
 		Tagline:       cardNode.Get("tagline").String(),
-		CreateTime:    timestamp.ParseF[timestamp.Nano](characterTavernDateFormat, cardNode.Get("createdAt").String(), trace.URL, metadataBinder.NormalizedURL),
-		UpdateTime:    timestamp.ParseF[timestamp.Nano](characterTavernDateFormat, cardNode.Get("lastUpdatedAt").String(), trace.URL, metadataBinder.NormalizedURL),
+		CreateTime:    timestamp.ParseF(characterTavernDateFormat, cardNode.Get("createdAt").String(), trace.URL, metadataBinder.NormalizedURL),
+		UpdateTime:    timestamp.ParseF(characterTavernDateFormat, cardNode.Get("lastUpdatedAt").String(), trace.URL, metadataBinder.NormalizedURL),
+		IsForked:      false,
 		Tags:          resolvedTags,
 	}, nil
 }

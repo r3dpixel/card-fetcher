@@ -22,6 +22,7 @@ func TestCharacterTavernImport(t *testing.T) {
 		Tagline("TaglineDescription").
 		CreateTime(1737895009100000000).
 		UpdateTime(1737944149051000000).
+		IsForked(false).
 		TagNames("Female").
 		Nickname("redpixel").
 		Username("redpixel").
@@ -53,6 +54,7 @@ func TestCharacterTavernImport_CCV3(t *testing.T) {
 		AssertNoErr().
 		Source(source.CharacterTavern).
 		SheetRevision(character.RevisionV3).
+		IsForked(false).
 		Consistent().
 		AssertImage()
 }
@@ -69,6 +71,7 @@ func TestCharacterTavernImportNotes(t *testing.T) {
 		Source(source.CharacterTavern).
 		SheetCreator("animatedspell").
 		SheetCreatorNotes("Your shapeshifting monster waifu—sweet as sin, twice as wicked. A devoted lover by day, an Encyclopedia-inspired hentai experiment by night.\n\nViolete is a bot with lots of kinky tag, if you don't like any of her suggestion during chat, just gently asked her she will comply (tentacle, Insect,monster, monster girl, etc)").
+		IsForked(false).
 		Consistent().
 		AssertImage()
 }
@@ -77,6 +80,7 @@ func TestCharacterTavernPngData(t *testing.T) {
 	FetchAndAssert(t, "https://character-tavern.com/character/wicked_ali/Veronica").
 		AssertNoErr().
 		Source(source.CharacterTavern).
+		IsForked(false).
 		Consistent().
 		AssertImage()
 }

@@ -1055,11 +1055,11 @@ func TestPatchTimestamps(t *testing.T) {
 	})
 }
 
-// TestPatchBook tests the patchBook function with comprehensive coverage
-func TestPatchBook(t *testing.T) {
+// TestPatchBookName tests the patchBookName function with comprehensive coverage
+func TestPatchBookName(t *testing.T) {
 	t.Run("should handle nil book", func(t *testing.T) {
 		assert.NotPanics(t, func() {
-			patchBook(nil, "any name")
+			patchBookName(nil, "any name")
 		})
 	})
 
@@ -1141,7 +1141,7 @@ func TestPatchBook(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				book := &character.Book{Name: property.String(stringsx.Empty)}
-				patchBook(book, tt.characterName)
+				patchBookName(book, tt.characterName)
 				assert.Equal(t, tt.expected, string(book.Name))
 			})
 		}
@@ -1207,7 +1207,7 @@ func TestPatchBook(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				book := &character.Book{Name: property.String(tt.initialName)}
-				patchBook(book, tt.characterName)
+				patchBookName(book, tt.characterName)
 				assert.Equal(t, tt.expected, string(book.Name))
 			})
 		}
@@ -1249,7 +1249,7 @@ func TestPatchBook(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				book := &character.Book{Name: property.String(tt.initialName)}
-				patchBook(book, tt.characterName)
+				patchBookName(book, tt.characterName)
 				assert.Equal(t, tt.expected, string(book.Name))
 			})
 		}
@@ -1263,7 +1263,7 @@ func TestPatchBook(t *testing.T) {
 			}
 
 			book := &character.Book{Name: property.String(stringsx.Empty)}
-			patchBook(book, longName)
+			patchBookName(book, longName)
 
 			assert.Equal(t, longName+" Lore Book", string(book.Name))
 		})
@@ -1281,7 +1281,7 @@ func TestPatchBook(t *testing.T) {
 				},
 			}
 
-			patchBook(book, "Test Character")
+			patchBookName(book, "Test Character")
 
 			assert.NotEqual(t, "", string(book.Name))
 		})
@@ -1301,7 +1301,7 @@ func TestPatchBook(t *testing.T) {
 				},
 			}
 
-			patchBook(book, "Character")
+			patchBookName(book, "Character")
 
 			assert.Equal(t, "Character Lore Book", string(book.Name))
 		})
@@ -1313,7 +1313,7 @@ func TestPatchBook(t *testing.T) {
 				Description: property.String(description),
 			}
 
-			patchBook(book, "Character")
+			patchBookName(book, "Character")
 
 			assert.Equal(t, "Character Lore Book", string(book.Name))
 			assert.Equal(t, "Book description", string(book.Description))

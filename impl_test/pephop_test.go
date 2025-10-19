@@ -22,6 +22,7 @@ func TestPephopImport(t *testing.T) {
 		TaglinePrefix("Fiery tomboy with top grades but almost expelled for smoking! 🚬😎 She's your tutor").
 		CreateTime(1689150440946000000).
 		UpdateTime(1730380506096000000).
+		IsForked(false).
 		TagCount(4).
 		TagContains("Female", "Dominant").
 		Nickname("TechWhiz").

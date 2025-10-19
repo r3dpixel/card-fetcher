@@ -27,6 +27,7 @@ type CardInfo struct {
 	Tagline       string
 	CreateTime    timestamp.Nano
 	UpdateTime    timestamp.Nano
+	IsForked      bool
 	Tags          []Tag
 }
 
@@ -77,8 +78,8 @@ func (m *Metadata) IsConsistentWith(card *character.Sheet) bool {
 		m.Name == string(card.Content.Name) &&
 		m.Nickname == string(card.Creator) &&
 		strings.HasPrefix(string(card.Content.CreatorNotes), m.Tagline) &&
-		timestamp.Convert[timestamp.Seconds](m.CreateTime) == card.Content.CreationDate &&
-		timestamp.Convert[timestamp.Seconds](m.LatestUpdateTime()) == card.Content.ModificationDate &&
+		timestamp.ConvertToSeconds(m.CreateTime) == card.Content.CreationDate &&
+		timestamp.ConvertToSeconds(m.LatestUpdateTime()) == card.Content.ModificationDate &&
 		((card.CharacterBook == nil && m.BookUpdateTime == 0) || (card.CharacterBook != nil && m.BookUpdateTime != 0)) &&
 		slices.Equal(metadataTags, card.Content.Tags)
 }

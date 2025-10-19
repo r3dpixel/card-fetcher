@@ -23,6 +23,8 @@ func TestPygmalionImport(t *testing.T) {
 		TaglinePrefix("Seele Vollerei's Alter Ego (Scenario A). Made by Bronya Rand and TheWandering514. ").
 		CreateTime(1706328712000000000).
 		UpdateTime(1722520534000000000).
+		IsForked(false).
+		IsForked(false).
 		TagCount(4).
 		TagContains("Ali:Chat").
 		Nickname("Bronya Rand").
@@ -71,6 +73,7 @@ func TestPygmalionDepthPrompt(t *testing.T) {
 		Source(source.Pygmalion).
 		SheetDepthPromptPromptPrefix("[ Writing Style: {{char}} speaks sharply, sometimes provocatively, but never outright cruel. Her rivalry with {{user}} is clear, but there are moments where she struggles to maintain her composure. ]").
 		SheetDepthPromptDepth(character.DefaultDepth).
+		IsForked(false).
 		Consistent().
 		AssertImage()
 }

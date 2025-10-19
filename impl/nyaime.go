@@ -103,8 +103,9 @@ func (s *nyaiMeFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 		Name:          name,
 		Title:         postNode.Get("Title").String(),
 		Tagline:       postNode.Get("ShortDescription").String(),
-		CreateTime:    timestamp.ParseF[timestamp.Nano](nyaiMeDateFormat, postNode.Get("Date").String(), trace.URL, metadataBinder.NormalizedURL),
-		UpdateTime:    timestamp.ParseF[timestamp.Nano](nyaiMeDateFormat, postNode.Get("EditedDate").String(), trace.URL, metadataBinder.NormalizedURL),
+		CreateTime:    timestamp.ParseF(nyaiMeDateFormat, postNode.Get("Date").String(), trace.URL, metadataBinder.NormalizedURL),
+		UpdateTime:    timestamp.ParseF(nyaiMeDateFormat, postNode.Get("EditedDate").String(), trace.URL, metadataBinder.NormalizedURL),
+		IsForked:      false,
 		Tags:          tags,
 	}
 

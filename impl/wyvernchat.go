@@ -77,8 +77,9 @@ func (s *wyvernChatFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder
 		Name:          metadataBinder.Get("chat_name").String(),
 		Title:         metadataBinder.Get("name").String(),
 		Tagline:       metadataBinder.Get("tagline").String(),
-		CreateTime:    timestamp.ParseF[timestamp.Nano](wyvernDateFormat, metadataBinder.Get("created_at").String(), trace.URL, metadataBinder.NormalizedURL),
-		UpdateTime:    timestamp.ParseF[timestamp.Nano](wyvernDateFormat, metadataBinder.Get("updated_at").String(), trace.URL, metadataBinder.NormalizedURL),
+		CreateTime:    timestamp.ParseF(wyvernDateFormat, metadataBinder.Get("created_at").String(), trace.URL, metadataBinder.NormalizedURL),
+		UpdateTime:    timestamp.ParseF(wyvernDateFormat, metadataBinder.Get("updated_at").String(), trace.URL, metadataBinder.NormalizedURL),
+		IsForked:      stringsx.IsNotBlank(metadataBinder.GetByPath("forked_from", "id").RefString()),
 		Tags:          models.TagsFromJsonArray(metadataBinder.Get("tags"), sonicx.WrapString),
 	}, nil
 }
@@ -100,7 +101,7 @@ func (s *wyvernChatFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataB
 	for _, lorebookNode := range array {
 		bookUpdateTime = max(
 			bookUpdateTime,
-			timestamp.ParseF[timestamp.Nano](wyvernDateFormat, sonicx.Of(lorebookNode).Get("updated_at").String(), trace.URL, metadataBinder.NormalizedURL),
+			timestamp.ParseF(wyvernDateFormat, sonicx.Of(lorebookNode).Get("updated_at").String(), trace.URL, metadataBinder.NormalizedURL),
 		)
 	}
 	return &fetcher.BookBinder{

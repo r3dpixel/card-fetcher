@@ -34,7 +34,7 @@ func PatchSheet(sheet *character.Sheet, metadata *models.Metadata) {
 	patchCreatorNotes(sheet, metadata)
 	patchTags(sheet, metadata)
 	patchTimestamps(sheet, metadata)
-	patchBook(sheet.CharacterBook, metadata.Name)
+	patchBookName(sheet.CharacterBook, metadata.Name)
 	patchLink(sheet, metadata)
 
 	sheet.Creator = property.String(metadata.Nickname)
@@ -97,14 +97,14 @@ func patchTags(card *character.Sheet, metadata *models.Metadata) {
 
 func patchTimestamps(card *character.Sheet, metadata *models.Metadata) {
 	// Assign the new V3 fields (modification and creation date)
-	card.ModificationDate = timestamp.Convert[timestamp.Seconds](metadata.LatestUpdateTime())
-	card.CreationDate = timestamp.Convert[timestamp.Seconds](metadata.CreateTime)
+	card.ModificationDate = timestamp.ConvertToSeconds(metadata.LatestUpdateTime())
+	card.CreationDate = timestamp.ConvertToSeconds(metadata.CreateTime)
 	if metadata.BookUpdateTime == 0 && card.CharacterBook != nil {
 		metadata.BookUpdateTime = metadata.UpdateTime
 	}
 }
 
-func patchBook(book *character.Book, characterName string) {
+func patchBookName(book *character.Book, characterName string) {
 	if book == nil {
 		return
 	}
@@ -114,7 +114,6 @@ func patchBook(book *character.Book, characterName string) {
 		book.Name = property.String(strings.Replace(string(book.Name), character.BookNamePlaceholder, characterName, 1))
 	}
 	book.Name = property.String(strings.Replace(string(book.Name), "/", "-", -1))
-	book.MirrorNameAndComment()
 }
 
 func patchLink(sheet *character.Sheet, metadata *models.Metadata) {

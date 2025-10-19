@@ -107,8 +107,9 @@ func (s *pygmalionFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder)
 		Title:         characterNode.Get("displayName").String(),
 		Name:          characterNode.GetByPath("personality", "name").String(),
 		Tagline:       characterNode.Get("description").String(),
-		CreateTime:    timestamp.Convert[timestamp.Nano](timestamp.Seconds(characterNode.Get("createdAt").Integer64())),
-		UpdateTime:    timestamp.Convert[timestamp.Nano](timestamp.Seconds(characterNode.Get("updatedAt").Integer64())),
+		CreateTime:    timestamp.ConvertToNano(timestamp.Seconds(characterNode.Get("createdAt").Integer64())),
+		UpdateTime:    timestamp.ConvertToNano(timestamp.Seconds(characterNode.Get("updatedAt").Integer64())),
+		IsForked:      false,
 		Tags:          models.TagsFromJsonArray(characterNode.Get("tags"), sonicx.WrapString),
 	}, nil
 }
@@ -146,7 +147,7 @@ func (s *pygmalionFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBi
 		bookResponse := sonicx.Of(bookResult)
 		updatedAt := bookResponse.Get("updatedAt").Integer64()
 		parsedResponses[index] = bookResponse
-		bookUpdateTime = max(bookUpdateTime, timestamp.Convert[timestamp.Nano](timestamp.Seconds(updatedAt)))
+		bookUpdateTime = max(bookUpdateTime, timestamp.ConvertToNano(timestamp.Seconds(updatedAt)))
 	}
 
 	return &fetcher.BookBinder{

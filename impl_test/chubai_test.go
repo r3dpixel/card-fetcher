@@ -22,6 +22,7 @@ func TestChubAI_Import(t *testing.T) {
 		Tagline("Tagline").
 		CreateTime(1737810077000000000).
 		UpdateTime(1747541869000000000).
+		IsForked(false).
 		TagNames("Female").
 		Nickname("Anonymous").
 		Username("anonymous").
@@ -64,6 +65,7 @@ func TestChubAI_Import_OneMultiLoreBook(t *testing.T) {
 		SheetBookName("The Fantasy World of Adolion").
 		SheetBookDescriptionNotEmpty().
 		SheetBookEntryCount(212).
+		IsForked(false).
 		Consistent().
 		AssertImage()
 }
@@ -74,6 +76,7 @@ func TestChubAI_Import_AuxiliaryLoreBook(t *testing.T) {
 		AssertNoErr().
 		SheetBookName("Maxine -- The fantasy world of Runa (Base Lore)").
 		SheetBookEntryCount(129).
+		IsForked(false).
 		Consistent().
 		AssertImage()
 }
@@ -82,6 +85,7 @@ func TestChubAI_MissingImage(t *testing.T) {
 	t.Parallel()
 	FetchAndAssert(t, "https://chub.ai/characters/Sugondees/saeko-490390c0ebee").
 		AssertNoErr().
+		IsForked(false).
 		Consistent().
 		AssertImage()
 }
@@ -90,6 +94,16 @@ func TestChubAI_BrokenLorebook(t *testing.T) {
 	FetchAndAssert(t, "https://chub.ai/characters/Decent_Coast/your-older-orc-step-sister-61c8107a3862").
 		AssertNoErr().
 		SheetBookEntryCount(57).
+		IsForked(false).
+		Consistent().
+		AssertImage()
+}
+
+func TestChubAI_Forked(t *testing.T) {
+	t.Parallel()
+	FetchAndAssert(t, "https://chub.ai/characters/Celestial_Coomer/fried-your-little-neighbor-was-left-in-your-care-0617b5c66b90").
+		AssertNoErr().
+		IsForked(true).
 		Consistent().
 		AssertImage()
 }
