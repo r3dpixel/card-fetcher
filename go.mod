@@ -8,8 +8,8 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/imroc/req/v3 v3.55.0
-	github.com/r3dpixel/card-parser v0.6.115
-	github.com/r3dpixel/toolkit v0.6.115
+	github.com/r3dpixel/card-parser v0.6.116
+	github.com/r3dpixel/toolkit v0.6.116
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
@@ -33,7 +33,7 @@ require (
 	github.com/hhrutter/pkcs7 v0.2.0 // indirect
 	github.com/hhrutter/tiff v1.0.2 // indirect
 	github.com/icholy/digest v1.1.0 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
