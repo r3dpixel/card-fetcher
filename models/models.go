@@ -70,18 +70,18 @@ func (m *Metadata) IsConsistentWith(card *character.Sheet) bool {
 
 	return !m.IsMalformed() &&
 		!card.IsMalformed() &&
-		string(m.Source) == string(card.Content.SourceID) &&
+		string(m.Source) == string(card.SourceID) &&
 		m.CharacterID == string(card.CharacterID) &&
 		m.CardInfo.PlatformID == string(card.PlatformID) &&
 		m.DirectURL == string(card.DirectLink) &&
 		m.Title == string(card.Title) &&
-		m.Name == string(card.Content.Name) &&
+		m.Name == string(card.Name) &&
 		m.Nickname == string(card.Creator) &&
-		strings.HasPrefix(string(card.Content.CreatorNotes), m.Tagline) &&
-		timestamp.ConvertToSeconds(m.CreateTime) == card.Content.CreationDate &&
-		timestamp.ConvertToSeconds(m.LatestUpdateTime()) == card.Content.ModificationDate &&
+		strings.HasPrefix(string(card.CreatorNotes), m.Tagline) &&
+		timestamp.ConvertToSeconds(m.CreateTime) == card.CreationDate &&
+		timestamp.ConvertToSeconds(m.LatestUpdateTime()) == card.ModificationDate &&
 		((card.CharacterBook == nil && m.BookUpdateTime == 0) || (card.CharacterBook != nil && m.BookUpdateTime != 0)) &&
-		slices.Equal(metadataTags, card.Content.Tags)
+		slices.Equal(metadataTags, card.Tags)
 }
 
 func (m *Metadata) Clone() *Metadata {
