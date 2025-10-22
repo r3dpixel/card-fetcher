@@ -5,11 +5,10 @@ go 1.25
 require (
 	github.com/bytedance/sonic v1.14.1
 	github.com/elliotchance/orderedmap/v3 v3.1.0
-	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/imroc/req/v3 v3.55.0
-	github.com/r3dpixel/card-parser v0.6.117
-	github.com/r3dpixel/toolkit v0.6.117
+	github.com/r3dpixel/card-parser v0.6.118
+	github.com/r3dpixel/toolkit v0.6.118
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
@@ -28,6 +27,7 @@ require (
 	github.com/gen2brain/jpegli v0.3.4 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hhrutter/lzw v1.0.0 // indirect
 	github.com/hhrutter/pkcs7 v0.2.0 // indirect
@@ -38,7 +38,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
-	github.com/pdfcpu/pdfcpu v0.11.0 // indirect
+	github.com/pdfcpu/pdfcpu v0.11.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect

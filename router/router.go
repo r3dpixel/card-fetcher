@@ -1,16 +1,12 @@
 package router
 
 import (
-	"cmp"
 	"slices"
 	"sync"
 
-	gcmp "github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/r3dpixel/card-fetcher/fetcher"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-fetcher/task"
-	"github.com/r3dpixel/card-parser/property"
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/stringsx"
 )
@@ -25,16 +21,6 @@ const (
 	IntegrationFailure       IntegrationStatus = "INTEGRATION FAILURE"
 	IntegrationSuccess       IntegrationStatus = "INTEGRATION SUCCESS"
 )
-
-var cmpOptions = []gcmp.Option{
-	cmpopts.EquateEmpty(),
-	cmpopts.SortSlices(comparator[string]),
-	cmpopts.SortSlices(comparator[int]),
-	cmpopts.SortSlices(comparator[float64]),
-	cmpopts.SortSlices(comparator[property.String]),
-	cmpopts.SortSlices(comparator[property.Integer]),
-	cmpopts.SortSlices(comparator[property.Float]),
-}
 
 type TaskBucket struct {
 	Tasks       map[string]task.Task
@@ -216,13 +202,9 @@ func (r *Router) checkIntegration(f fetcher.Fetcher) IntegrationStatus {
 		return IntegrationFailure
 	}
 
-	if !gcmp.Equal(localCard.Sheet, characterCard.Sheet, cmpOptions...) {
+	if !localCard.Sheet.DeepEquals(characterCard.Sheet) {
 		return IntegrationFailure
 	}
 
 	return IntegrationSuccess
-}
-
-func comparator[T cmp.Ordered](a, b T) bool {
-	return a < b
 }
