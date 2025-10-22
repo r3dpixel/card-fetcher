@@ -195,7 +195,7 @@ func (r *Router) checkIntegration(f fetcher.Fetcher) IntegrationStatus {
 	}
 
 	metadata, _ = fetcherTask.FetchMetadata()
-	if characterCard.IsMalformed() {
+	if !characterCard.Integrity() {
 		return IntegrationFailure
 	}
 	if !metadata.IsConsistentWith(characterCard.Sheet) {

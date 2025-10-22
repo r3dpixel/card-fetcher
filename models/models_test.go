@@ -257,7 +257,7 @@ func TestMetadata_IsConsistentWith(t *testing.T) {
 	})
 }
 
-func TestMetadata_IsMalformed(t *testing.T) {
+func TestMetadata_Integrity(t *testing.T) {
 	t.Run("should return false for well-formed metadata", func(t *testing.T) {
 		metadata := &Metadata{
 			Source: source.ID("test-source"),
@@ -279,7 +279,7 @@ func TestMetadata_IsMalformed(t *testing.T) {
 			},
 		}
 
-		assert.False(t, metadata.IsMalformed(), "Well-formed metadata should not be malformed")
+		assert.True(t, metadata.Integrity(), "Well-formed metadata should not be malformed")
 	})
 
 	t.Run("should return true for malformed metadata", func(t *testing.T) {
@@ -403,7 +403,7 @@ func TestMetadata_IsMalformed(t *testing.T) {
 				// Apply mutation to make it malformed
 				tc.mutator(metadata)
 
-				assert.True(t, metadata.IsMalformed(), "Expected metadata to be malformed for case: %s", tc.name)
+				assert.False(t, metadata.Integrity(), "Expected metadata to be malformed for case: %s", tc.name)
 			})
 		}
 	})

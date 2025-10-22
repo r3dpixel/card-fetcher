@@ -47,19 +47,20 @@ func (m *Metadata) LatestUpdateTime() timestamp.Nano {
 	return max(m.CardInfo.UpdateTime, m.BookUpdateTime)
 }
 
-func (m *Metadata) IsMalformed() bool {
-	return stringsx.IsBlank(string(m.Source)) ||
-		stringsx.IsBlank(m.NormalizedURL) ||
-		stringsx.IsBlank(m.DirectURL) ||
-		stringsx.IsBlank(m.CardInfo.PlatformID) ||
-		stringsx.IsBlank(m.CharacterID) ||
-		stringsx.IsBlank(m.Name) ||
-		stringsx.IsBlank(m.Title) ||
-		m.CreateTime == 0 ||
-		m.UpdateTime == 0 ||
-		stringsx.IsBlank(m.Nickname) ||
-		stringsx.IsBlank(m.Username) ||
-		stringsx.IsBlank(m.CreatorInfo.PlatformID)
+func (m *Metadata) Integrity() bool {
+	return stringsx.IsNotBlank(string(m.Source)) &&
+		stringsx.IsNotBlank(m.NormalizedURL) &&
+		stringsx.IsNotBlank(m.DirectURL) &&
+		stringsx.IsNotBlank(m.CardInfo.PlatformID) &&
+		stringsx.IsNotBlank(m.CharacterID) &&
+		stringsx.IsNotBlank(m.Name) &&
+		stringsx.IsNotBlank(m.Title) &&
+		m.CreateTime > 0 &&
+		m.UpdateTime > 0 &&
+		m.UpdateTime >= m.CreateTime &&
+		stringsx.IsNotBlank(m.Nickname) &&
+		stringsx.IsNotBlank(m.Username) &&
+		stringsx.IsNotBlank(m.CreatorInfo.PlatformID)
 }
 
 func (m *Metadata) IsConsistentWith(card *character.Sheet) bool {
@@ -68,8 +69,8 @@ func (m *Metadata) IsConsistentWith(card *character.Sheet) bool {
 	}
 	metadataTags := TagsToNames(m.CardInfo.Tags)
 
-	return !m.IsMalformed() &&
-		!card.IsMalformed() &&
+	return m.Integrity() &&
+		card.Integrity() &&
 		string(m.Source) == string(card.SourceID) &&
 		m.CharacterID == string(card.CharacterID) &&
 		m.CardInfo.PlatformID == string(card.PlatformID) &&
