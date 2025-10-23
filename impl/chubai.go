@@ -27,16 +27,14 @@ import (
 )
 
 const (
-	chubSourceURL          string = "chub.ai"
-	chubMainURL            string = "chub.ai/characters/"                                     // Main NormalizedURL for ChubAI
-	chubAlternateURL       string = "characterhub.org/characters/"                            // Mirror NormalizedURL for ChubAI
-	chubApiURL             string = "https://api.chub.ai/api/characters/%s?full=true"         // Public API for retrieving metadata
-	chubApiCardDownloadURL string = "https://avatars.charhub.io/avatars/%s/chara_card_v2.png" // Download NormalizedURL for retrieving card
-	chubApiBookURL         string = "https://api.chub.ai/api/lorebooks/%s?full=true"          // Public API for retrieving books
-	chubApiUsersURL        string = "https://api.chub.ai/api/users/%s"
+	chubSourceURL    string = "chub.ai"
+	chubMainURL      string = "chub.ai/characters/"                             // Main NormalizedURL for ChubAI
+	chubAlternateURL string = "characterhub.org/characters/"                    // Mirror NormalizedURL for ChubAI
+	chubApiURL       string = "https://api.chub.ai/api/characters/%s?full=true" // Public API for retrieving metadata
+	chubApiBookURL   string = "https://api.chub.ai/api/lorebooks/%s?full=true"  // Public API for retrieving books
+	chubApiUsersURL  string = "https://api.chub.ai/api/users/%s"
 
-	chubAiTaglineFieldName string = "node.tagline"   // Tagline field name for ChubAI
-	chubAiDateFormat       string = time.RFC3339Nano // Date Format for ChubAI API
+	chubAiDateFormat string = time.RFC3339Nano // Date Format for ChubAI API
 
 	chubCharaPath = "chara_char_v2" + png.Extension
 	chubCardPath  = "chara_card_v2" + png.Extension

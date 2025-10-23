@@ -7,8 +7,8 @@ require (
 	github.com/elliotchance/orderedmap/v3 v3.1.0
 	github.com/google/uuid v1.6.0
 	github.com/imroc/req/v3 v3.55.0
-	github.com/r3dpixel/card-parser v0.6.122
-	github.com/r3dpixel/toolkit v0.6.122
+	github.com/r3dpixel/card-parser v0.6.123
+	github.com/r3dpixel/toolkit v0.6.123
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1

@@ -27,8 +27,7 @@ const (
 	characterTavernGreetingsURL string = "https://character-tavern.com/api/character/%s/alternative-greetings" // Greetings URL for CharacterTavern
 	characterTavernAvatarURL    string = "https://cards.character-tavern.com/cdn-cgi/image/format=png/%s.png"  // Avatar Download URL for CharacterTavern
 
-	characterTavernTaglineField string = "tagline"        // Tagline field name for CharacterTavern
-	characterTavernDateFormat   string = time.RFC3339Nano // Date Format for CharacterTavern
+	characterTavernDateFormat string = time.RFC3339Nano // Date Format for CharacterTavern
 
 )
 

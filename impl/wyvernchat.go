@@ -29,8 +29,6 @@ const (
 	wyvernApiURL  string = "https://api.wyvern.chat/characters/%s" // API NormalizedURL for WyvernChat
 
 	wyvernDateFormat string = time.RFC3339Nano // Date Format for WyvernChat
-
-	wyvernBookExtensionsField string = "extensions" // Extensions field for WyvernChat Book
 )
 
 type WyvernChatBuilder struct{}
