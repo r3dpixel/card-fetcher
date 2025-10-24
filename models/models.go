@@ -10,6 +10,8 @@ import (
 	"github.com/r3dpixel/toolkit/timestamp"
 )
 
+var anonymousIdentifier = strings.ToLower(character.AnonymousCreator)
+
 type Metadata struct {
 	Source source.ID
 	CardInfo
@@ -60,7 +62,7 @@ func (m *Metadata) Integrity() bool {
 		m.UpdateTime >= m.CreateTime &&
 		stringsx.IsNotBlank(m.Nickname) &&
 		stringsx.IsNotBlank(m.Username) &&
-		stringsx.IsNotBlank(m.CreatorInfo.PlatformID)
+		(strings.ToLower(m.Nickname) == anonymousIdentifier || stringsx.IsNotBlank(m.CreatorInfo.PlatformID))
 }
 
 func (m *Metadata) IsConsistentWith(card *character.Sheet) bool {
