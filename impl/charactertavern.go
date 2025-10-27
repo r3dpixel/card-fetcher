@@ -57,20 +57,20 @@ func NewCharacterTavernFetcher(client *reqx.Client) fetcher.Fetcher {
 	return impl
 }
 
-func (s *characterTavernFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
+func (f *characterTavernFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	metadataURL := fmt.Sprintf(characterTavernApiURL, characterID)
 
-	return s.client.R().Get(metadataURL)
+	return f.client.R().Get(metadataURL)
 }
 
-func (s *characterTavernFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
-	return s.BaseFetcher.CreateBinder(metadataResponse.GetByPath("card", "path").String(), metadataResponse)
+func (f *characterTavernFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+	return f.BaseFetcher.CreateBinder(metadataResponse.GetByPath("card", "path").String(), metadataResponse)
 }
 
-func (s *characterTavernFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+func (f *characterTavernFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
 	cardNode := metadataBinder.Get("card")
 	platformID := cardNode.Get("id").String()
-	tagResponse, err := reqx.String(s.client.R().Get(fmt.Sprintf(characterTavernTagsURL, platformID)))
+	tagResponse, err := reqx.String(f.client.R().Get(fmt.Sprintf(characterTavernTagsURL, platformID)))
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (s *characterTavernFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataB
 
 	return &models.CardInfo{
 		NormalizedURL: metadataBinder.NormalizedURL,
-		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
+		DirectURL:     f.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    platformID,
 		CharacterID:   metadataBinder.CharacterID,
 		Name:          cardNode.Get("inChatName").String(),
@@ -96,7 +96,7 @@ func (s *characterTavernFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataB
 	}, nil
 }
 
-func (s *characterTavernFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
+func (f *characterTavernFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
 	displayName := strings.Split(metadataBinder.GetByPath("card", "path").String(), `/`)[0]
 	return &models.CreatorInfo{
 		Nickname:   displayName,
@@ -106,8 +106,8 @@ func (s *characterTavernFetcher) FetchCreatorInfo(metadataBinder *fetcher.Metada
 }
 
 // FetchCharacterCard - Retrieve card for given url
-func (s *characterTavernFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
-	rawCard, err := png.FromURL(s.client, fmt.Sprintf(characterTavernAvatarURL, binder.CharacterID)).LastLongest().Get()
+func (f *characterTavernFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+	rawCard, err := png.FromURL(f.client, fmt.Sprintf(characterTavernAvatarURL, binder.CharacterID)).LastLongest().Get()
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (s *characterTavernFetcher) FetchCharacterCard(binder *fetcher.Binder) (*pn
 	sheet.PostHistoryInstructions.SetIf(cardNode.Get("definition_post_history_prompt").String())
 
 	platformID := cardNode.Get("id").String()
-	greetingsResponse, err := reqx.String(s.client.R().Get(fmt.Sprintf(characterTavernGreetingsURL, platformID)))
+	greetingsResponse, err := reqx.String(f.client.R().Get(fmt.Sprintf(characterTavernGreetingsURL, platformID)))
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (s *characterTavernFetcher) FetchCharacterCard(binder *fetcher.Binder) (*pn
 
 // CharacterID - override the GetCharacterID behavior to account for allowed spaces in the NormalizedURL
 // CharacterTavern allows spaces in the NormalizedURL (why???)
-func (s *characterTavernFetcher) CharacterID(cardURL string, matchedURL string) string {
+func (f *characterTavernFetcher) CharacterID(cardURL string, matchedURL string) string {
 	// Unescape NormalizedURL if needed
 	sanitizedURL, err := url.QueryUnescape(cardURL)
 	if err != nil {
@@ -156,5 +156,5 @@ func (s *characterTavernFetcher) CharacterID(cardURL string, matchedURL string) 
 	}
 
 	// Extract characterID
-	return s.BaseFetcher.CharacterID(sanitizedURL, matchedURL)
+	return f.BaseFetcher.CharacterID(sanitizedURL, matchedURL)
 }

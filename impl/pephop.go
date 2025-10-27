@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	pephopUuidLength int = 36 // PepHop Slug length
+	pephopUuidLength int = 36 // PepHop UUID length
 
 	pephopSourceURL string = "pephop.ai"
 	pephopBaseURL   string = "pephop.ai/characters/"                                          // Main NormalizedURL for PepHop
@@ -53,16 +53,16 @@ func NewPephopFetcher(client *reqx.Client) fetcher.Fetcher {
 	return impl
 }
 
-func (s *pephopFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
+func (f *pephopFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	metadataURL := fmt.Sprintf(pephopApiURL, characterID)
-	return s.client.R().Get(metadataURL)
+	return f.client.R().Get(metadataURL)
 }
 
-func (s *pephopFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
-	return s.BaseFetcher.CreateBinder(metadataResponse.Get("id").String(), metadataResponse)
+func (f *pephopFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+	return f.BaseFetcher.CreateBinder(metadataResponse.Get("id").String(), metadataResponse)
 }
 
-func (s *pephopFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+func (f *pephopFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
 	cardName := metadataBinder.Get("name").String()
 
 	tags := models.TagsFromJsonArray(
@@ -74,7 +74,7 @@ func (s *pephopFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 
 	metadata := &models.CardInfo{
 		NormalizedURL: metadataBinder.NormalizedURL,
-		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
+		DirectURL:     f.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    metadataBinder.CharacterID,
 		CharacterID:   metadataBinder.CharacterID,
 		Name:          cardName,
@@ -89,7 +89,7 @@ func (s *pephopFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 	return metadata, nil
 }
 
-func (s *pephopFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
+func (f *pephopFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
 	displayName := metadataBinder.Get("creator_name").String()
 	return &models.CreatorInfo{
 		Nickname:   displayName,
@@ -102,10 +102,10 @@ func FetchBookResponses(*fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
 	return &fetcher.EmptyBookBinder, nil
 }
 
-func (s *pephopFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+func (f *pephopFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
 	// Download avatar and transform to PNG
 	pepHopAvatarURL := fmt.Sprintf(pephopAvatarURL, binder.Get("avatar").String())
-	rawCard, err := png.FromURL(s.client, pepHopAvatarURL).LastVersion().Get()
+	rawCard, err := png.FromURL(f.client, pepHopAvatarURL).LastVersion().Get()
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +135,6 @@ func (s *pephopFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.Charact
 
 // CharacterID - returns the characterID for pephop source
 // For PepHop the suffix must be trimmed to leave just the real Slug
-func (s *pephopFetcher) CharacterID(url string, matchedURL string) string {
-	return s.BaseFetcher.CharacterID(url, matchedURL)[0:pephopUuidLength]
+func (f *pephopFetcher) CharacterID(url string, matchedURL string) string {
+	return f.BaseFetcher.CharacterID(url, matchedURL)[0:pephopUuidLength]
 }

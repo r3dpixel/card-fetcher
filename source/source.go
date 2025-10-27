@@ -16,6 +16,7 @@ const (
 	PepHop          ID = "PepHop"
 	Pygmalion       ID = "Pygmalion"
 	WyvernChat      ID = "WyvernChat"
+	JannyAI         ID = "JannyAI"
 	//RisuAI          ID = "RisuAI"
 	//AICharacterCard ID = "AICharacterCard"
 )

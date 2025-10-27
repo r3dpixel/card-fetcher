@@ -75,33 +75,33 @@ func NewPygmalionFetcher(client *reqx.Client, opts PygmalionOpts) fetcher.Fetche
 	return impl
 }
 
-func (s *pygmalionFetcher) Close() {
-	s.client.UnregisterAuth(s.serviceLabel)
+func (f *pygmalionFetcher) Close() {
+	f.client.UnregisterAuth(f.serviceLabel)
 }
 
-func (s *pygmalionFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
+func (f *pygmalionFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	requestBodyBytes, _ := sonicx.Config.Marshal(
 		map[string]string{
 			"characterMetaId": characterID,
 		},
 	)
-	return s.client.R().
+	return f.client.R().
 		SetContentType(reqx.JsonApplicationContentType).
 		SetBody(requestBodyBytes).
 		Post(pygmalionApiURL)
 }
 
-func (s *pygmalionFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+func (f *pygmalionFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
 	newCharacterID := metadataResponse.GetByPath("character", "id").String()
-	return s.BaseFetcher.CreateBinder(newCharacterID, metadataResponse)
+	return f.BaseFetcher.CreateBinder(newCharacterID, metadataResponse)
 }
 
-func (s *pygmalionFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+func (f *pygmalionFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
 	characterNode := metadataBinder.Get("character")
 
 	return &models.CardInfo{
 		NormalizedURL: metadataBinder.NormalizedURL,
-		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
+		DirectURL:     f.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    metadataBinder.CharacterID,
 		CharacterID:   metadataBinder.CharacterID,
 		Title:         characterNode.Get("displayName").String(),
@@ -114,7 +114,7 @@ func (s *pygmalionFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder)
 	}, nil
 }
 
-func (s *pygmalionFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
+func (f *pygmalionFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
 	ownerNode := metadataBinder.GetByPath("character", "owner")
 
 	return &models.CreatorInfo{
@@ -124,8 +124,8 @@ func (s *pygmalionFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBind
 	}, nil
 }
 
-func (s *pygmalionFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
-	bookResponses, err := s.fetchBookResponses(metadataBinder.CharacterID)
+func (f *pygmalionFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
+	bookResponses, err := f.fetchBookResponses(metadataBinder.CharacterID)
 	if err != nil {
 		return nil, err
 	}
@@ -156,21 +156,21 @@ func (s *pygmalionFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBi
 	}, nil
 }
 
-func (s *pygmalionFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
-	characterCard, err := s.fetchCharacterCard(binder)
+func (f *pygmalionFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+	characterCard, err := f.fetchCharacterCard(binder)
 	if err != nil {
 		return nil, err
 	}
 
-	characterCard.Sheet.CharacterBook = s.parseBookResponses(binder)
+	characterCard.Sheet.CharacterBook = f.parseBookResponses(binder)
 
 	return characterCard, nil
 }
 
-func (s *pygmalionFetcher) fetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+func (f *pygmalionFetcher) fetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
 	// Download avatar and transform to PNG
 	avatarUrl := binder.GetByPath("character", "avatarUrl").String()
-	rawCard, err := png.FromURL(s.client, avatarUrl).LastVersion().Get()
+	rawCard, err := png.FromURL(f.client, avatarUrl).LastVersion().Get()
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (s *pygmalionFetcher) fetchCharacterCard(binder *fetcher.Binder) (*png.Char
 	}
 
 	bytes, err := reqx.Bytes(
-		s.client.R().
+		f.client.R().
 			SetContentType(reqx.JsonApplicationContentType).
 			Get(fmt.Sprintf(pygmalionCardExportURL, binder.CharacterID)),
 	)
@@ -200,7 +200,7 @@ func (s *pygmalionFetcher) fetchCharacterCard(binder *fetcher.Binder) (*png.Char
 	return characterCard, nil
 }
 
-func (s *pygmalionFetcher) parseBookResponses(binder *fetcher.Binder) *character.Book {
+func (f *pygmalionFetcher) parseBookResponses(binder *fetcher.Binder) *character.Book {
 
 	bookMerger := character.NewBookMerger()
 
@@ -210,7 +210,7 @@ func (s *pygmalionFetcher) parseBookResponses(binder *fetcher.Binder) *character
 		if err != nil {
 			println(err)
 			log.Warn().Err(err).
-				Str(trace.SOURCE, string(s.sourceID)).
+				Str(trace.SOURCE, string(f.sourceID)).
 				Str(trace.URL, binder.DirectURL).
 				Msg("Could not parse book")
 			continue
@@ -221,7 +221,7 @@ func (s *pygmalionFetcher) parseBookResponses(binder *fetcher.Binder) *character
 	return bookMerger.Build()
 }
 
-func (s *pygmalionFetcher) fetchBookResponses(characterID string) (fetcher.JsonResponse, error) {
+func (f *pygmalionFetcher) fetchBookResponses(characterID string) (fetcher.JsonResponse, error) {
 	requestBodyBytes, _ := sonicx.Config.Marshal(
 		map[string]string{
 			"characterId": characterID,
@@ -229,7 +229,7 @@ func (s *pygmalionFetcher) fetchBookResponses(characterID string) (fetcher.JsonR
 	)
 
 	response, err := reqx.String(
-		s.client.AR(s.serviceLabel).
+		f.client.AR(f.serviceLabel).
 			SetContentType(reqx.JsonApplicationContentType).
 			SetBody(requestBodyBytes).
 			Post(pygmalionLinkedBookURL),
@@ -246,7 +246,7 @@ func (s *pygmalionFetcher) fetchBookResponses(characterID string) (fetcher.JsonR
 	return sonicx.Of(wrap), nil
 }
 
-func (s *pygmalionFetcher) refreshBearerToken(c *reqx.Client, identity cred.Identity) (string, error) {
+func (f *pygmalionFetcher) refreshBearerToken(c *reqx.Client, identity cred.Identity) (string, error) {
 	credentialsMap := map[string]string{
 		pygmalionAuthUsernameField: identity.User,
 		pygmalionAuthPasswordField: identity.Secret,
@@ -255,7 +255,7 @@ func (s *pygmalionFetcher) refreshBearerToken(c *reqx.Client, identity cred.Iden
 	response, err := reqx.String(
 		c.R().
 			SetContentType("application/x-www-form-urlencoded").
-			SetHeaders(s.headers).
+			SetHeaders(f.headers).
 			SetFormData(credentialsMap).
 			Post(pygmalionAuthURL),
 	)

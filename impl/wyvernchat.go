@@ -57,19 +57,19 @@ func NewWyvernChatFetcher(client *reqx.Client) fetcher.Fetcher {
 	return impl
 }
 
-func (s *wyvernChatFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
+func (f *wyvernChatFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	metadataUrl := fmt.Sprintf(wyvernApiURL, characterID)
-	return s.client.R().Get(metadataUrl)
+	return f.client.R().Get(metadataUrl)
 }
 
-func (s *wyvernChatFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
-	return s.BaseFetcher.CreateBinder(metadataResponse.Get("id").String(), metadataResponse)
+func (f *wyvernChatFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+	return f.BaseFetcher.CreateBinder(metadataResponse.Get("id").String(), metadataResponse)
 }
 
-func (s *wyvernChatFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+func (f *wyvernChatFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
 	return &models.CardInfo{
 		NormalizedURL: metadataBinder.NormalizedURL,
-		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
+		DirectURL:     f.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    strings.TrimPrefix(metadataBinder.CharacterID, symbols.Underscore),
 		CharacterID:   metadataBinder.CharacterID,
 		Name:          metadataBinder.Get("chat_name").String(),
@@ -82,7 +82,7 @@ func (s *wyvernChatFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder
 	}, nil
 }
 
-func (s *wyvernChatFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
+func (f *wyvernChatFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
 	creatorNode := metadataBinder.Get("creator")
 	displayName := creatorNode.Get("displayName").String()
 	return &models.CreatorInfo{
@@ -92,7 +92,7 @@ func (s *wyvernChatFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBin
 	}, nil
 }
 
-func (s *wyvernChatFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
+func (f *wyvernChatFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
 	bookUpdateTime := timestamp.Nano(0)
 	lorebooksNode := metadataBinder.Get("lorebooks")
 	array, _ := lorebooksNode.ArrayUseNode()
@@ -107,10 +107,10 @@ func (s *wyvernChatFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataB
 	}, nil
 }
 
-func (s *wyvernChatFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+func (f *wyvernChatFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
 	avatarURL := binder.Get("avatar").String()
 
-	rawCard, err := png.FromURL(s.client, avatarURL).LastVersion().Get()
+	rawCard, err := png.FromURL(f.client, avatarURL).LastVersion().Get()
 	if err != nil {
 		return nil, err
 	}

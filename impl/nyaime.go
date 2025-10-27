@@ -66,20 +66,20 @@ func NewNyaiMeFetcher(client *reqx.Client) fetcher.Fetcher {
 	return impl
 }
 
-func (s *nyaiMeFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
+func (f *nyaiMeFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	// Retrieve NyaiMe identifier
-	identifier := s.getIdentifier(characterID)
+	identifier := f.getIdentifier(characterID)
 	// Compute PostID (base26 conversion of the identifier)
-	postID := s.getPostID(identifier)
+	postID := f.getPostID(identifier)
 
 	// Retrieve the metadata (log error is response is invalid)
-	return s.client.R().
-		SetHeaders(s.headers).
-		SetBodyString(s.downloadRequestBody(postID)).
+	return f.client.R().
+		SetHeaders(f.headers).
+		SetBodyString(f.downloadRequestBody(postID)).
 		Post(nyaiMeApiURL)
 }
 
-func (s *nyaiMeFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+func (f *nyaiMeFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
 	postNode := metadataBinder.Get("Post")
 
 	var name string
@@ -97,7 +97,7 @@ func (s *nyaiMeFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 
 	metadata := &models.CardInfo{
 		NormalizedURL: metadataBinder.NormalizedURL,
-		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
+		DirectURL:     f.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    postNode.Get("ID").String(),
 		CharacterID:   metadataBinder.CharacterID,
 		Name:          name,
@@ -112,7 +112,7 @@ func (s *nyaiMeFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 	return metadata, nil
 }
 
-func (s *nyaiMeFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
+func (f *nyaiMeFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
 	postNode := metadataBinder.Get("Post")
 	displayName := postNode.Get("UserName").String()
 
@@ -123,12 +123,12 @@ func (s *nyaiMeFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder)
 	}, nil
 }
 
-func (s *nyaiMeFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+func (f *nyaiMeFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
 	postNode := binder.Get("Post")
 	// Retrieve png sheet NormalizedURL
 	nyaiMeCardURL := postNode.Get("ImageURL").String()
 	// Download PNG sheet
-	rawCard, err := png.FromURL(s.client, nyaiMeCardURL).LastVersion().Get()
+	rawCard, err := png.FromURL(f.client, nyaiMeCardURL).LastVersion().Get()
 	// If the characterCard or the sheet is nil, then the export failed
 	if err != nil {
 		return nil, err
@@ -149,12 +149,12 @@ func (s *nyaiMeFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.Charact
 }
 
 // downloadRequestBody - create the body for the POST download request (based on characterID)
-func (s *nyaiMeFetcher) downloadRequestBody(postId int) string {
+func (f *nyaiMeFetcher) downloadRequestBody(postId int) string {
 	return `{"PostID": ` + strconv.Itoa(postId) + `}`
 }
 
 // getPostID - convert NyaiMe identifier to base26
-func (s *nyaiMeFetcher) getPostID(identifier string) int {
+func (f *nyaiMeFetcher) getPostID(identifier string) int {
 	postId := 0
 	for _, char := range identifier {
 		postId = postId*26 + int(char-nyaiStartingRune+1)
@@ -163,7 +163,7 @@ func (s *nyaiMeFetcher) getPostID(identifier string) int {
 }
 
 // getIdentifier - parse NyaiMe url and retrieve unique identifier
-func (s *nyaiMeFetcher) getIdentifier(url string) string {
+func (f *nyaiMeFetcher) getIdentifier(url string) string {
 	tokens := strings.Split(url, symbols.Underscore)
 	return tokens[len(tokens)-1]
 }

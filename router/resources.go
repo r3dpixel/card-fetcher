@@ -20,6 +20,7 @@ var resourceURLs = map[source.ID]string{
 	source.PepHop:          "pephop.ai/characters/eaa39561-1d4d-4d10-a87c-77f038f8b211",
 	source.Pygmalion:       "pygmalion.chat/character/d47f2f4e-0263-49f8-b872-d8fd7588dbb5",
 	source.WyvernChat:      "wyvern.chat/characters/_MBnL8cfMUVNFVTBe4GNm4",
+	source.JannyAI:         "jannyai.com/characters/421439ad-de63-4448-bc9b-c2c75cedb0af",
 	//source.RisuAI:          "-",
 	//source.AICharacterCard: "-",
 }

@@ -180,6 +180,6 @@ func TestRouter_Integrations(t *testing.T) {
 
 	result := r.CheckIntegrations()
 	for sourceID, status := range result {
-		assert.Equal(t, status, IntegrationSuccess, "Integrations failed for %s", sourceID)
+		assert.Equal(t, IntegrationSuccess, status, "Integrations failed for %s", sourceID)
 	}
 }

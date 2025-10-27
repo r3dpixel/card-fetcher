@@ -70,16 +70,16 @@ func NewChubAIFetcher(client *reqx.Client) fetcher.Fetcher {
 	return impl
 }
 
-func (s *chubAIFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
+func (f *chubAIFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
 	metadataURL := fmt.Sprintf(chubApiURL, characterID)
-	return s.client.R().Get(metadataURL)
+	return f.client.R().Get(metadataURL)
 }
 
-func (s *chubAIFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
-	return s.BaseFetcher.CreateBinder(metadataResponse.GetByPath("node", "fullPath").String(), metadataResponse)
+func (f *chubAIFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+	return f.BaseFetcher.CreateBinder(metadataResponse.GetByPath("node", "fullPath").String(), metadataResponse)
 }
 
-func (s *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+func (f *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
 	node := metadataBinder.Get("node")
 	definitionNode := node.Get("definition")
 
@@ -89,7 +89,7 @@ func (s *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 
 	return &models.CardInfo{
 		NormalizedURL: metadataBinder.NormalizedURL,
-		DirectURL:     s.DirectURL(metadataBinder.CharacterID),
+		DirectURL:     f.DirectURL(metadataBinder.CharacterID),
 		PlatformID:    node.Get("id").String(),
 		CharacterID:   metadataBinder.CharacterID,
 		Name:          definitionNode.Get("name").String(),
@@ -102,10 +102,10 @@ func (s *chubAIFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*
 	}, nil
 }
 
-func (s *chubAIFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
+func (f *chubAIFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
 	displayName := strings.Split(metadataBinder.CharacterID, `/`)[0]
 
-	response, err := reqx.String(s.client.R().Get(fmt.Sprintf(chubApiUsersURL, displayName)))
+	response, err := reqx.String(f.client.R().Get(fmt.Sprintf(chubApiUsersURL, displayName)))
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (s *chubAIFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder)
 	}, nil
 }
 
-func (s *chubAIFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
+func (f *chubAIFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
 	bookIDs := sonicx.ArrayToMap(
 		metadataBinder.GetByPath("node", "related_lorebooks"),
 		func(token string) bool {
@@ -132,8 +132,8 @@ func (s *chubAIFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinde
 		sonicx.WrapString,
 	)
 
-	linkedBookResponses, linkedBookUpdateTime := s.retrieveLinkedBooks(metadataBinder, bookIDs)
-	auxBookResponses, auxBookUpdateTime := s.retrieveAuxBooks(metadataBinder, bookIDs)
+	linkedBookResponses, linkedBookUpdateTime := f.retrieveLinkedBooks(metadataBinder, bookIDs)
+	auxBookResponses, auxBookUpdateTime := f.retrieveAuxBooks(metadataBinder, bookIDs)
 	linkedBookResponses = append(linkedBookResponses, auxBookResponses...)
 
 	return &fetcher.BookBinder{
@@ -142,18 +142,18 @@ func (s *chubAIFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinde
 	}, nil
 }
 
-func (s *chubAIFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+func (f *chubAIFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
 	node := binder.Get("node")
 	chubCardURL := node.Get("max_res_url").String()
 	backupURL := node.Get("avatar_url").String()
 
-	characterCard, err := s.retrieveCardData(chubCardURL, backupURL)
+	characterCard, err := f.retrieveCardData(chubCardURL, backupURL)
 	if err != nil {
 		return nil, err
 	}
 	definitionNode := node.Get("definition")
 
-	if err := s.updateFieldsWithFallback(characterCard, definitionNode); err != nil {
+	if err := f.updateFieldsWithFallback(characterCard, definitionNode); err != nil {
 		return nil, err
 	}
 
@@ -194,7 +194,7 @@ func (s *chubAIFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.Charact
 	return characterCard, nil
 }
 
-func (s *chubAIFetcher) updateFieldsWithFallback(characterCard *png.CharacterCard, definitionNode fetcher.JsonResponse) error {
+func (f *chubAIFetcher) updateFieldsWithFallback(characterCard *png.CharacterCard, definitionNode fetcher.JsonResponse) error {
 	characterCard.Description.SetIf(definitionNode.Get("personality").String())
 	characterCard.Personality.SetIf(definitionNode.Get("tavern_personality").String())
 	characterCard.Scenario.SetIf(definitionNode.Get("scenario").String())
@@ -213,8 +213,8 @@ func (s *chubAIFetcher) updateFieldsWithFallback(characterCard *png.CharacterCar
 	return nil
 }
 
-func (s *chubAIFetcher) retrieveCardData(cardURL string, backupURL string) (*png.CharacterCard, error) {
-	rawCard, err := png.FromURL(s.client, cardURL, s.fixAvatarURL(cardURL), backupURL).LastVersion().Get()
+func (f *chubAIFetcher) retrieveCardData(cardURL string, backupURL string) (*png.CharacterCard, error) {
+	rawCard, err := png.FromURL(f.client, cardURL, f.fixAvatarURL(cardURL), backupURL).LastVersion().Get()
 	if err != nil {
 		return nil, err
 	}
@@ -222,11 +222,11 @@ func (s *chubAIFetcher) retrieveCardData(cardURL string, backupURL string) (*png
 	return rawCard.Decode()
 }
 
-func (s *chubAIFetcher) retrieveLinkedBooks(metadataBinder *fetcher.MetadataBinder, bookIDs *orderedmap.OrderedMap[string, struct{}]) ([]fetcher.JsonResponse, timestamp.Nano) {
+func (f *chubAIFetcher) retrieveLinkedBooks(metadataBinder *fetcher.MetadataBinder, bookIDs *orderedmap.OrderedMap[string, struct{}]) ([]fetcher.JsonResponse, timestamp.Nano) {
 	var bookResponses []fetcher.JsonResponse
 	maxBookUpdateTime := timestamp.Nano(0)
 	for bookID := range bookIDs.Keys() {
-		if parsedResponse, bookUpdateTime, found := s.retrieveBookData(metadataBinder, bookID); found {
+		if parsedResponse, bookUpdateTime, found := f.retrieveBookData(metadataBinder, bookID); found {
 			bookResponses = append(bookResponses, parsedResponse)
 			maxBookUpdateTime = max(maxBookUpdateTime, bookUpdateTime)
 		}
@@ -235,7 +235,7 @@ func (s *chubAIFetcher) retrieveLinkedBooks(metadataBinder *fetcher.MetadataBind
 	return bookResponses, maxBookUpdateTime
 }
 
-func (s *chubAIFetcher) retrieveAuxBooks(metadataBinder *fetcher.MetadataBinder, bookIDs *orderedmap.OrderedMap[string, struct{}]) ([]fetcher.JsonResponse, timestamp.Nano) {
+func (f *chubAIFetcher) retrieveAuxBooks(metadataBinder *fetcher.MetadataBinder, bookIDs *orderedmap.OrderedMap[string, struct{}]) ([]fetcher.JsonResponse, timestamp.Nano) {
 	var bookResponses []fetcher.JsonResponse
 	maxBookUpdateTime := timestamp.Nano(0)
 	auxSources := metadataBinder.GetByPath("node", "description").String() + symbols.Space + metadataBinder.GetByPath("node", "tagline").String()
@@ -246,7 +246,7 @@ func (s *chubAIFetcher) retrieveAuxBooks(metadataBinder *fetcher.MetadataBinder,
 		}
 		bookPath := bookURLMatches[1]
 		for stringsx.IsNotBlank(bookPath) {
-			parsedResponse, bookUpdateTime, found := s.retrieveBookData(metadataBinder, bookPath)
+			parsedResponse, bookUpdateTime, found := f.retrieveBookData(metadataBinder, bookPath)
 			if found {
 				bookID := strings.TrimSpace(parsedResponse.GetByPath("node", "id").String())
 				if !bookIDs.Has(bookID) {
@@ -264,16 +264,16 @@ func (s *chubAIFetcher) retrieveAuxBooks(metadataBinder *fetcher.MetadataBinder,
 	return bookResponses, maxBookUpdateTime
 }
 
-func (s *chubAIFetcher) retrieveBookData(metadataBinder *fetcher.MetadataBinder, bookID string) (fetcher.JsonResponse, timestamp.Nano, bool) {
+func (f *chubAIFetcher) retrieveBookData(metadataBinder *fetcher.MetadataBinder, bookID string) (fetcher.JsonResponse, timestamp.Nano, bool) {
 	response, err := reqx.String(
-		s.client.R().
+		f.client.R().
 			SetContentType(reqx.JsonApplicationContentType).
 			Get(fmt.Sprintf(chubApiBookURL, bookID)),
 	)
 
 	if err != nil {
 		log.Warn().Err(err).
-			Str(trace.SOURCE, string(s.sourceID)).
+			Str(trace.SOURCE, string(f.sourceID)).
 			Str(trace.URL, metadataBinder.DirectURL).
 			Str("bookID", bookID).
 			Msg("Lorebook unlinked/deleted")
@@ -283,7 +283,7 @@ func (s *chubAIFetcher) retrieveBookData(metadataBinder *fetcher.MetadataBinder,
 	wrap, err := sonicx.GetFromString(response)
 	if err != nil {
 		log.Warn().Err(err).
-			Str(trace.SOURCE, string(s.sourceID)).
+			Str(trace.SOURCE, string(f.sourceID)).
 			Str(trace.URL, metadataBinder.DirectURL).
 			Str("bookID", bookID).
 			Msg("Could not parse book")
@@ -295,7 +295,7 @@ func (s *chubAIFetcher) retrieveBookData(metadataBinder *fetcher.MetadataBinder,
 }
 
 // getChubIdentifier - Return the chub specific identifier (based on characterID)
-func (s *chubAIFetcher) getChubIdentifier(characterID string) string {
+func (f *chubAIFetcher) getChubIdentifier(characterID string) string {
 	// Find the last index of the '-' character
 	dashIndex := strings.LastIndex(characterID, symbols.Dash)
 	// If there is no '-', there is no identifier
@@ -319,7 +319,7 @@ func (s *chubAIFetcher) getChubIdentifier(characterID string) string {
 }
 
 // fixAvatarURL - corrects the chub avatar NormalizedURL in case it has the wrong path (replaces chara_char_v2 with chara_card_v2)
-func (s *chubAIFetcher) fixAvatarURL(avatarURL string) string {
+func (f *chubAIFetcher) fixAvatarURL(avatarURL string) string {
 	avatarURL = strings.TrimSuffix(avatarURL, chubCharaPath)
 	avatarURL = avatarURL + chubCardPath
 	return avatarURL

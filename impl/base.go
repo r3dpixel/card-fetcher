@@ -46,56 +46,56 @@ func NewBaseFetcher(config BaseConfig) BaseFetcher {
 	}
 }
 
-func (s *BaseFetcher) Extends(top fetcher.Fetcher) {
-	s.Fetcher = top
-	s.serviceLabel = fmt.Sprintf("%s::%s", s.Fetcher.SourceID(), uuid.New())
+func (f *BaseFetcher) Extends(top fetcher.Fetcher) {
+	f.Fetcher = top
+	f.serviceLabel = fmt.Sprintf("%s::%s", f.Fetcher.SourceID(), uuid.New())
 }
 
-func (s *BaseFetcher) SourceID() source.ID {
-	return s.sourceID
+func (f *BaseFetcher) SourceID() source.ID {
+	return f.sourceID
 }
 
-func (s *BaseFetcher) SourceURL() string {
-	return s.sourceURL
+func (f *BaseFetcher) SourceURL() string {
+	return f.sourceURL
 }
 
-func (s *BaseFetcher) MainURL() string {
-	return s.mainURL
+func (f *BaseFetcher) MainURL() string {
+	return f.mainURL
 }
 
-func (s *BaseFetcher) BaseURLs() []string {
-	return s.baseURLs
+func (f *BaseFetcher) BaseURLs() []string {
+	return f.baseURLs
 }
 
-func (s *BaseFetcher) CharacterID(url string, matchedURL string) string {
+func (f *BaseFetcher) CharacterID(url string, matchedURL string) string {
 	tokens := strings.Split(url, matchedURL)
 	return tokens[len(tokens)-1]
 }
 
-func (s *BaseFetcher) DirectURL(characterID string) string {
-	return path.Join(s.directURL, characterID)
+func (f *BaseFetcher) DirectURL(characterID string) string {
+	return path.Join(f.directURL, characterID)
 }
 
-func (s *BaseFetcher) NormalizeURL(characterID string) string {
-	return path.Join(s.Fetcher.MainURL(), characterID)
+func (f *BaseFetcher) NormalizeURL(characterID string) string {
+	return path.Join(f.Fetcher.MainURL(), characterID)
 }
 
-func (s *BaseFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
+func (f *BaseFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
 	return &fetcher.MetadataBinder{
 		CharacterID:   characterID,
-		NormalizedURL: s.Fetcher.NormalizeURL(characterID),
-		DirectURL:     s.Fetcher.DirectURL(characterID),
+		NormalizedURL: f.Fetcher.NormalizeURL(characterID),
+		DirectURL:     f.Fetcher.DirectURL(characterID),
 		JsonResponse:  metadataResponse,
 	}, nil
 }
 
-func (s *BaseFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
+func (f *BaseFetcher) FetchBookResponses(metadataBinder *fetcher.MetadataBinder) (*fetcher.BookBinder, error) {
 	return &fetcher.EmptyBookBinder, nil
 }
 
-func (s *BaseFetcher) IsSourceUp() bool {
-	_, err := s.client.R().Get("https://" + s.sourceURL)
+func (f *BaseFetcher) IsSourceUp() bool {
+	_, err := f.client.R().Get("https://" + f.sourceURL)
 	return err == nil
 }
 
-func (s *BaseFetcher) Close() {}
+func (f *BaseFetcher) Close() {}

@@ -59,18 +59,18 @@ func NewMockFetcher(config MockConfig, mockData MockData) fetcher.Fetcher {
 	return f
 }
 
-func (m *mockFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
-	return m.MockData.Response, m.MockData.ResponseError
+func (f *mockFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
+	return f.MockData.Response, f.MockData.ResponseError
 }
 
-func (m *mockFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
-	return m.MockData.CardInfo, m.MockData.CardInfoErr
+func (f *mockFetcher) FetchCardInfo(metadataBinder *fetcher.MetadataBinder) (*models.CardInfo, error) {
+	return f.MockData.CardInfo, f.MockData.CardInfoErr
 }
 
-func (m *mockFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
-	return m.MockData.CreatorInfo, m.MockData.CreatorErr
+func (f *mockFetcher) FetchCreatorInfo(metadataBinder *fetcher.MetadataBinder) (*models.CreatorInfo, error) {
+	return f.MockData.CreatorInfo, f.MockData.CreatorErr
 }
 
-func (m *mockFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
-	return m.MockData.CharacterCard, m.MockData.CharacterCardErr
+func (f *mockFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.CharacterCard, error) {
+	return f.MockData.CharacterCard, f.MockData.CharacterCardErr
 }
