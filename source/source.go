@@ -30,6 +30,7 @@ func (ID) Values() []string {
 		string(PepHop),
 		string(Pygmalion),
 		string(WyvernChat),
+		string(JannyAI),
 		//string(RisuAI),
 		//string(AICharacterCard),
 	}
