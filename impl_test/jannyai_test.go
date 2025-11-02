@@ -2,6 +2,7 @@ package fetcher_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/character"
@@ -12,6 +13,7 @@ func TestJannyAIImport(t *testing.T) {
 	t.Parallel()
 	FetchAndAssert(t, "https://jannyai.com/characters/421439ad-de63-4448-bc9b-c2c75cedb0af_character-amber-hawthorn").
 		AssertNoErr().
+		AssetJannyAICookie().
 		Source(source.JannyAI).
 		NormalizedURL("jannyai.com/characters/421439ad-de63-4448-bc9b-c2c75cedb0af").
 		DirectURL("jannyai.com/characters/421439ad-de63-4448-bc9b-c2c75cedb0af").
@@ -21,7 +23,7 @@ func TestJannyAIImport(t *testing.T) {
 		Title("Amber Hawthorn").
 		TaglinePrefix("").
 		CreateTime(1727063067584588000).
-		UpdateTime(1761523200000000000).
+		UpdateTime(time.Now().Truncate(24*time.Hour).UnixNano()).
 		IsForked(false).
 		TagCount(7).
 		TagContains("Female", "Dominant").

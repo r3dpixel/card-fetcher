@@ -3,12 +3,12 @@ module github.com/r3dpixel/card-fetcher
 go 1.25
 
 require (
-	github.com/bytedance/sonic v1.14.1
+	github.com/bytedance/sonic v1.14.2
 	github.com/elliotchance/orderedmap/v3 v3.1.0
 	github.com/google/uuid v1.6.0
 	github.com/imroc/req/v3 v3.55.0
-	github.com/r3dpixel/card-parser v0.6.129
-	github.com/r3dpixel/toolkit v0.6.129
+	github.com/r3dpixel/card-parser v0.6.132
+	github.com/r3dpixel/toolkit v0.6.132
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
@@ -19,7 +19,7 @@ require (
 	github.com/HugoSmits86/nativewebp v1.2.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
-	github.com/bytedance/sonic/loader v0.3.0 // indirect
+	github.com/bytedance/sonic/loader v0.4.0 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect

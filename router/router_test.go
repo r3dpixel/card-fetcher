@@ -6,7 +6,6 @@ import (
 
 	"github.com/r3dpixel/card-fetcher/impl"
 	"github.com/r3dpixel/card-fetcher/source"
-	"github.com/r3dpixel/toolkit/cred"
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/stretchr/testify/assert"
 )
@@ -169,14 +168,7 @@ func TestRouter_TaskDispatching(t *testing.T) {
 }
 
 func TestRouter_Integrations(t *testing.T) {
-	r := New(reqx.Options{
-		RetryCount:    3,
-		Impersonation: reqx.Chrome,
-	})
-
-	// Register all default fetchers
-	builders := impl.DefaultBuilders(impl.BuilderOptions{PygmalionIdentityReader: cred.NewManager("pygmalion", cred.Env)})
-	r.RegisterBuilders(builders...)
+	r := EnvConfigured()
 
 	result := r.CheckIntegrations()
 	for sourceID, status := range result {

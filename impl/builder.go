@@ -7,6 +7,7 @@ import (
 
 type BuilderOptions struct {
 	PygmalionIdentityReader cred.IdentityReader
+	JannyAICookieProvider   func() JannyCookies
 }
 
 func DefaultBuilders(opts BuilderOptions) []fetcher.Builder {
@@ -17,6 +18,6 @@ func DefaultBuilders(opts BuilderOptions) []fetcher.Builder {
 		PephopBuilder{},
 		PygmalionBuilder{IdentityReader: opts.PygmalionIdentityReader},
 		WyvernChatBuilder{},
-		JannyAIBuilder{},
+		JannyAIBuilder{cookieProvider: opts.JannyAICookieProvider},
 	}
 }

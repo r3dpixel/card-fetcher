@@ -95,6 +95,9 @@ func executeBinderFlow(
 	normalizedURL string,
 ) (*fetcher.Binder, error) {
 	response, err := reqx.String(f.FetchMetadataResponse(characterID))
+	if err != nil {
+		return nil, err
+	}
 
 	metadataResponse, err := sonicx.GetFromString(response)
 	if err != nil {

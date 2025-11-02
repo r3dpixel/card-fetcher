@@ -2,6 +2,7 @@ package impl
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/imroc/req/v3"
@@ -27,19 +28,30 @@ const (
 	jannyAIAvatarURL string = "https://image.jannyai.com/bot-avatars/%s"
 )
 
-type JannyAIBuilder struct{}
+type JannyCookies struct {
+	CloudflareClearance string
+	UserAgent           string
+}
+
+type JannyAIOpts struct {
+	cookieProvider func() JannyCookies
+}
+
+type JannyAIBuilder JannyAIOpts
 
 func (b JannyAIBuilder) Build(client *reqx.Client) fetcher.Fetcher {
-	return NewJannyAIFetcher(client)
+	return NewJannyAIFetcher(client, JannyAIOpts(b))
 }
 
 type jannyAIFetcher struct {
 	BaseFetcher
+	cookieProvider func() JannyCookies
+	commonCookie   http.Cookie
 }
 
-func NewJannyAIFetcher(client *reqx.Client) fetcher.Fetcher {
+func NewJannyAIFetcher(client *reqx.Client, opts JannyAIOpts) fetcher.Fetcher {
 	impl := &jannyAIFetcher{
-		BaseFetcher{
+		BaseFetcher: BaseFetcher{
 			client:    client,
 			sourceID:  source.JannyAI,
 			sourceURL: jannyAISourceURL,
@@ -47,6 +59,7 @@ func NewJannyAIFetcher(client *reqx.Client) fetcher.Fetcher {
 			mainURL:   jannyAIMainURL,
 			baseURLs:  []string{jannyAIMainURL},
 		},
+		cookieProvider: opts.cookieProvider,
 	}
 	impl.Extends(impl)
 	return impl
@@ -57,7 +70,16 @@ func (f *jannyAIFetcher) CharacterID(url string, matchedURL string) string {
 }
 
 func (f *jannyAIFetcher) FetchMetadataResponse(characterID string) (*req.Response, error) {
-	return f.client.R().Get(fmt.Sprintf(jannyAIApiURL, characterID))
+	cookies := f.cookieProvider()
+	return f.client.R().
+		SetHeader("User-Agent", cookies.UserAgent).
+		SetCookies(
+			&http.Cookie{
+				Name:  "cf_clearance",
+				Value: cookies.CloudflareClearance,
+			},
+		).
+		Get(fmt.Sprintf(jannyAIApiURL, characterID))
 }
 
 func (f *jannyAIFetcher) CreateBinder(characterID string, metadataResponse fetcher.JsonResponse) (*fetcher.MetadataBinder, error) {
@@ -116,6 +138,15 @@ func (f *jannyAIFetcher) FetchCharacterCard(binder *fetcher.Binder) (*png.Charac
 }
 
 func (f *jannyAIFetcher) IsSourceUp() bool {
-	_, err := f.client.R().Get("https://" + f.sourceURL + "/collections")
+	cookies := f.cookieProvider()
+	_, err := f.client.R().
+		SetHeader("User-Agent", cookies.UserAgent).
+		SetCookies(
+			&http.Cookie{
+				Name:  "cf_clearance",
+				Value: cookies.CloudflareClearance,
+			},
+		).
+		Get("https://" + f.sourceURL + "/collections")
 	return err == nil
 }

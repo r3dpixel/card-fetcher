@@ -1,12 +1,16 @@
 package router
 
 import (
+	"os"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/r3dpixel/card-fetcher/fetcher"
+	"github.com/r3dpixel/card-fetcher/impl"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-fetcher/task"
+	"github.com/r3dpixel/toolkit/cred"
 	"github.com/r3dpixel/toolkit/reqx"
 	"github.com/r3dpixel/toolkit/stringsx"
 )
@@ -38,6 +42,28 @@ type Router struct {
 	client    *reqx.Client
 	fetcherMu sync.RWMutex
 	fetchers  []fetcher.Fetcher
+}
+
+func EnvConfigured() *Router {
+	r := New(
+		reqx.Options{
+			RetryCount:    4,
+			MinBackoff:    10 * time.Millisecond,
+			MaxBackoff:    500 * time.Millisecond,
+			Impersonation: reqx.Chrome,
+		},
+	)
+	builders := impl.DefaultBuilders(impl.BuilderOptions{
+		PygmalionIdentityReader: cred.NewManager("pygmalion", cred.Env),
+		JannyAICookieProvider: func() impl.JannyCookies {
+			return impl.JannyCookies{
+				CloudflareClearance: os.Getenv("JANNY_CF_COOKIE"),
+				UserAgent:           os.Getenv("JANNY_USER_AGENT"),
+			}
+		},
+	})
+	r.RegisterBuilders(builders...)
+	return r
 }
 
 func New(opts reqx.Options) *Router {

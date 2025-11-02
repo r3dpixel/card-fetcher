@@ -5,35 +5,18 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/r3dpixel/card-fetcher/impl"
 	"github.com/r3dpixel/card-fetcher/models"
 	"github.com/r3dpixel/card-fetcher/router"
 	"github.com/r3dpixel/card-fetcher/source"
 	"github.com/r3dpixel/card-parser/character"
 	"github.com/r3dpixel/card-parser/png"
-	"github.com/r3dpixel/toolkit/cred"
-	"github.com/r3dpixel/toolkit/reqx"
+	"github.com/r3dpixel/toolkit/stringsx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var testRouter = initTestRouter()
-
-func initTestRouter() *router.Router {
-	r := router.New(
-		reqx.Options{
-			RetryCount:    4,
-			MinBackoff:    10 * time.Millisecond,
-			MaxBackoff:    500 * time.Millisecond,
-			Impersonation: reqx.Chrome,
-		},
-	)
-	builders := impl.DefaultBuilders(impl.BuilderOptions{PygmalionIdentityReader: cred.NewManager("pygmalion", cred.Env)})
-	r.RegisterBuilders(builders...)
-	return r
-}
+var testRouter = router.EnvConfigured()
 
 type CharacterAssertion struct {
 	t        *testing.T
@@ -85,7 +68,22 @@ func (ca *CharacterAssertion) AssertPygmalionCredentials() *CharacterAssertion {
 	}
 
 	for _, envVar := range requiredEnvVars {
-		if os.Getenv(envVar) == "" {
+		if stringsx.IsBlank(os.Getenv(envVar)) {
+			assert.Fail(ca.t, "Missing required environment variable: %s", envVar)
+		}
+	}
+
+	return ca
+}
+
+func (ca *CharacterAssertion) AssetJannyAICookie() *CharacterAssertion {
+	requiredEnvVars := []string{
+		"JANNY_CF_COOKIE",
+		"JANNY_USER_AGENT",
+	}
+
+	for _, envVar := range requiredEnvVars {
+		if stringsx.IsBlank(os.Getenv(envVar)) {
 			assert.Fail(ca.t, "Missing required environment variable: %s", envVar)
 		}
 	}
