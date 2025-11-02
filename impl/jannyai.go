@@ -34,7 +34,7 @@ type JannyCookies struct {
 }
 
 type JannyAIOpts struct {
-	cookieProvider func() JannyCookies
+	CookieProvider func() JannyCookies
 }
 
 type JannyAIBuilder JannyAIOpts
@@ -59,7 +59,7 @@ func NewJannyAIFetcher(client *reqx.Client, opts JannyAIOpts) fetcher.Fetcher {
 			mainURL:   jannyAIMainURL,
 			baseURLs:  []string{jannyAIMainURL},
 		},
-		cookieProvider: opts.cookieProvider,
+		cookieProvider: opts.CookieProvider,
 	}
 	impl.Extends(impl)
 	return impl

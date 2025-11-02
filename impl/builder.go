@@ -18,6 +18,6 @@ func DefaultBuilders(opts BuilderOptions) []fetcher.Builder {
 		PephopBuilder{},
 		PygmalionBuilder{IdentityReader: opts.PygmalionIdentityReader},
 		WyvernChatBuilder{},
-		JannyAIBuilder{cookieProvider: opts.JannyAICookieProvider},
+		JannyAIBuilder{CookieProvider: opts.JannyAICookieProvider},
 	}
 }
