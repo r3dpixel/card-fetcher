@@ -14,14 +14,315 @@
     "post_history_instructions": "",
     "alternate_greetings": [],
     "character_book": {
-      "name": "Veliona-WI -- Honkai Impact 3rd Lorebook",
-      "description": "A lorebook for Bronya Rand's and The Wandering514's Veliona (Scenarios A and B).\n----------------------\nA small collection of entries of Honkai Impact 3rd for Bronya Rand's Bronya Zaychik and Veliona bots.",
+      "name": "Honkai Impact 3rd Lorebook -- Veliona-WI",
+      "description": "A small collection of entries of Honkai Impact 3rd for Bronya Rand's Bronya Zaychik and Veliona bots.\n----------------------\nA lorebook for Bronya Rand's and The Wandering514's Veliona (Scenarios A and B).",
       "scan_depth": 0,
       "token_budget": 0,
       "recursive_scanning": false,
       "entries": [
         {
           "id": 0,
+          "keys": [
+            "Honkai"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Honkai: lead by the Will of Honkai, forms(Herrschers, Honkai Beasts, Honkai Sickness, Honkai Energy) ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 1,
+          "keys": [
+            "Honkai Sickness"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Honkai Sickness: disease, lethal, spread by radiation, incurable, can be delayed, causes blindness, leads to total organ failure, visible as a purple line in the body ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 2,
+          "keys": [
+            "Honkai Energy"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Honkai Energy: matter, can turn humans and animals into zombies ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 3,
+          "keys": [
+            "Valkyrie"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Valkyrie: futuristic female warriors, uses a D to S ranking, purpose is to fight off the Honkai ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 4,
+          "keys": [
+            "Project X-10"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Project X-10: experiment, managed by Cocolia, purpose was to fight against the Honkai, created to make powerful humanoid combat weapons, aims to instill a spiritual aspect into them, was cancelled ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 5,
+          "keys": [
+            "Stigma",
+            "Stigmata"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Stigma: plural(Stigmata), visual mark on a human, occurs more likely with women, indicates Honkai adaptability ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 6,
+          "keys": [
+            "Sea of Quanta",
+            "Quantum Sea"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Sea of Quanta: enclosed dimension, isolated from reality ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 7,
+          "keys": [
+            "Hyperion"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Hyperion: flying battleship, houses Valkyrie ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 8,
+          "keys": [
+            "Herrscher",
+            "Herrschers"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Herrscher: immensely powerful entities, destroys humanity, can be born inside humans ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 9,
+          "keys": [
+            "Herrscher of Domination"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Herrscher of Domination: manipulative, nihilistic, exploits weak mental fortitude, composed of countless puppets, puppets created from despairing humans, operates within Theater of Domination ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 10,
+          "keys": [
+            "Theater of Domination",
+            "Theatre of Domination"
+          ],
+          "secondary_keys": [],
+          "name": "",
+          "comment": "",
+          "content": "[ Theater of Domination: pocket dimension, grand theater themed ]",
+          "constant": false,
+          "selective": true,
+          "insertion_order": 100,
+          "enabled": true,
+          "use_regex": true,
+          "extensions": {
+            "case_sensitive": false,
+            "cooldown": 0,
+            "delay": 0,
+            "depth": 0,
+            "match_whole_words": false,
+            "position": 1,
+            "probability": 100,
+            "role": 0,
+            "selectiveLogic": 0,
+            "sticky": 0
+          }
+        },
+        {
+          "id": 11,
           "keys": [
             "Seele"
           ],
@@ -50,7 +351,7 @@
           }
         },
         {
-          "id": 1,
+          "id": 12,
           "keys": [
             "Seele"
           ],
@@ -79,7 +380,7 @@
           }
         },
         {
-          "id": 2,
+          "id": 13,
           "keys": [
             "Seele"
           ],
@@ -108,7 +409,7 @@
           }
         },
         {
-          "id": 3,
+          "id": 14,
           "keys": [
             "protect"
           ],
@@ -137,7 +438,7 @@
           }
         },
         {
-          "id": 4,
+          "id": 15,
           "keys": [
             "protect"
           ],
@@ -166,7 +467,7 @@
           }
         },
         {
-          "id": 5,
+          "id": 16,
           "keys": [
             "jealous"
           ],
@@ -195,7 +496,7 @@
           }
         },
         {
-          "id": 6,
+          "id": 17,
           "keys": [
             "jealous"
           ],
@@ -224,7 +525,7 @@
           }
         },
         {
-          "id": 7,
+          "id": 18,
           "keys": [
             "good-for-nothing",
             "good for nothing",
@@ -258,7 +559,7 @@
           }
         },
         {
-          "id": 8,
+          "id": 19,
           "keys": [
             "good-for-nothing",
             "good for nothing",
@@ -292,7 +593,7 @@
           }
         },
         {
-          "id": 9,
+          "id": 20,
           "keys": [
             "Bronya",
             "Zaychik",
@@ -323,7 +624,7 @@
           }
         },
         {
-          "id": 10,
+          "id": 21,
           "keys": [
             "Bronya",
             "Zaychik",
@@ -354,7 +655,7 @@
           }
         },
         {
-          "id": 11,
+          "id": 22,
           "keys": [
             "Kiana",
             "Kaslana",
@@ -383,7 +684,7 @@
           }
         },
         {
-          "id": 12,
+          "id": 23,
           "keys": [
             "Kiana",
             "Kaslana",
@@ -412,7 +713,7 @@
           }
         },
         {
-          "id": 13,
+          "id": 24,
           "keys": [
             "weapon",
             "weapons",
@@ -448,7 +749,7 @@
           }
         },
         {
-          "id": 14,
+          "id": 25,
           "keys": [
             "weapon",
             "weapons",
@@ -484,7 +785,7 @@
           }
         },
         {
-          "id": 15,
+          "id": 26,
           "keys": [
             "Sea of Quanta",
             "Quantum Sea"
@@ -512,7 +813,7 @@
           }
         },
         {
-          "id": 16,
+          "id": 27,
           "keys": [
             "Herrscher of Domination"
           ],
@@ -539,7 +840,7 @@
           }
         },
         {
-          "id": 17,
+          "id": 28,
           "keys": [
             "Theater of Domination",
             "Theatre of Domination"
@@ -567,7 +868,7 @@
           }
         },
         {
-          "id": 18,
+          "id": 29,
           "keys": [
             "Bronya",
             "Zaychik",
@@ -598,7 +899,7 @@
           }
         },
         {
-          "id": 19,
+          "id": 30,
           "keys": [
             "Sin",
             "Mal"
@@ -626,7 +927,7 @@
           }
         },
         {
-          "id": 20,
+          "id": 31,
           "keys": [
             "Sin",
             "Mal"
@@ -654,7 +955,7 @@
           }
         },
         {
-          "id": 21,
+          "id": 32,
           "keys": [
             "Sin",
             "Mal"
@@ -682,7 +983,7 @@
           }
         },
         {
-          "id": 22,
+          "id": 33,
           "keys": [
             "kabedon",
             "interrogate",
@@ -717,7 +1018,7 @@
           }
         },
         {
-          "id": 23,
+          "id": 34,
           "keys": [
             "kabedon",
             "interrogate",
@@ -752,7 +1053,7 @@
           }
         },
         {
-          "id": 24,
+          "id": 35,
           "keys": [
             "abandon",
             "abandoned",
@@ -790,7 +1091,7 @@
           }
         },
         {
-          "id": 25,
+          "id": 36,
           "keys": [
             "abandon",
             "abandoned",
@@ -811,307 +1112,6 @@
           "constant": false,
           "selective": true,
           "insertion_order": 0,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 26,
-          "keys": [
-            "Honkai"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Honkai: lead by the Will of Honkai, forms(Herrschers, Honkai Beasts, Honkai Sickness, Honkai Energy) ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 27,
-          "keys": [
-            "Honkai Sickness"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Honkai Sickness: disease, lethal, spread by radiation, incurable, can be delayed, causes blindness, leads to total organ failure, visible as a purple line in the body ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 28,
-          "keys": [
-            "Honkai Energy"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Honkai Energy: matter, can turn humans and animals into zombies ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 29,
-          "keys": [
-            "Valkyrie"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Valkyrie: futuristic female warriors, uses a D to S ranking, purpose is to fight off the Honkai ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 30,
-          "keys": [
-            "Project X-10"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Project X-10: experiment, managed by Cocolia, purpose was to fight against the Honkai, created to make powerful humanoid combat weapons, aims to instill a spiritual aspect into them, was cancelled ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 31,
-          "keys": [
-            "Stigma",
-            "Stigmata"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Stigma: plural(Stigmata), visual mark on a human, occurs more likely with women, indicates Honkai adaptability ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 32,
-          "keys": [
-            "Sea of Quanta",
-            "Quantum Sea"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Sea of Quanta: enclosed dimension, isolated from reality ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 33,
-          "keys": [
-            "Hyperion"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Hyperion: flying battleship, houses Valkyrie ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 34,
-          "keys": [
-            "Herrscher",
-            "Herrschers"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Herrscher: immensely powerful entities, destroys humanity, can be born inside humans ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 35,
-          "keys": [
-            "Herrscher of Domination"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Herrscher of Domination: manipulative, nihilistic, exploits weak mental fortitude, composed of countless puppets, puppets created from despairing humans, operates within Theater of Domination ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
-          "enabled": true,
-          "use_regex": true,
-          "extensions": {
-            "case_sensitive": false,
-            "cooldown": 0,
-            "delay": 0,
-            "depth": 0,
-            "match_whole_words": false,
-            "position": 1,
-            "probability": 100,
-            "role": 0,
-            "selectiveLogic": 0,
-            "sticky": 0
-          }
-        },
-        {
-          "id": 36,
-          "keys": [
-            "Theater of Domination",
-            "Theatre of Domination"
-          ],
-          "secondary_keys": [],
-          "name": "",
-          "comment": "",
-          "content": "[ Theater of Domination: pocket dimension, grand theater themed ]",
-          "constant": false,
-          "selective": true,
-          "insertion_order": 100,
           "enabled": true,
           "use_regex": true,
           "extensions": {

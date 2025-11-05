@@ -52,11 +52,10 @@ func TestPygmalionImport(t *testing.T) {
 		SheetBookDescriptionContains(character.BookDescriptionSeparator).
 		SheetBookDescriptionContains("A lorebook for Bronya Rand's and The Wandering514's Veliona (Scenarios A and B).").
 		SheetBookEntryName(0, stringsx.Empty).
-		SheetBookEntryContent(0, "[ Seele Vollerei: gentle, caring, timid, coward, popular with others, friends(Bronya Zaychik, Kiana Kaslana), protected by({{char}}), everything that {{char}} isn't, host of {{char}} ]").
+		SheetBookEntryContent(0, "[ Honkai: lead by the Will of Honkai, forms(Herrschers, Honkai Beasts, Honkai Sickness, Honkai Energy) ]").
 		SheetBookEntryKeyCount(0, 1).
-		SheetBookEntryPrimaryKey(0, "Seele").
-		SheetBookEntrySecondaryKeyCount(0, 1).
-		SheetBookEntrySecondaryKey(0, "Vollerei").
+		SheetBookEntryPrimaryKey(0, "Honkai").
+		SheetBookEntrySecondaryKeyCount(0, 0).
 		SheetDepthPromptPrompt(stringsx.Empty).
 		SheetDepthPromptDepth(0).
 		SheetNickname("Veliona").

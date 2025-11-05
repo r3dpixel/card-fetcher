@@ -69,7 +69,7 @@ func (ca *CharacterAssertion) AssertPygmalionCredentials() *CharacterAssertion {
 
 	for _, envVar := range requiredEnvVars {
 		if stringsx.IsBlank(os.Getenv(envVar)) {
-			assert.Fail(ca.t, "Missing required environment variable: %s", envVar)
+			assert.Failf(ca.t, "Missing required environment variable: %s", envVar)
 		}
 	}
 
